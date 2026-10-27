@@ -2,7 +2,7 @@ const $=id=>document.getElementById(id);
 const app={mode:'local',active:null,timer:null,missions:[],tools:[],missionToken:null,workspaceTool:null,workspaceSource:'tools'};
 function safe(t){return String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 async function api(path,opt){const r=await fetch(path,opt);let data;try{data=await r.json()}catch{data={detail:`HTTP ${r.status}`}}if(!r.ok)throw Error(typeof data.detail==='string'?data.detail:`HTTP ${r.status}`);return data}
-function route(name){document.querySelectorAll('.page').forEach(e=>e.classList.toggle('shown',e.id===name));document.querySelectorAll('[data-route]').forEach(e=>e.classList.toggle('active',e.dataset.route===name));$('crumb').textContent={overview:'MISSION CONTROL',agents:'AGENT WORKFORCE',tools:'ENTERPRISE TOOLS',audit:'EVIDENCE LEDGER',reviews:'HUMAN REVIEW',workspace:'SPECIALIST WORKSPACE'}[name];window.scrollTo({top:0,behavior:'smooth'});if(name==='reviews')renderReviewQueue();if(name==='audit'&&app.active){$('auditMission').value=app.active;showAudit(app.active)}}
+function route(name){document.querySelectorAll('.page').forEach(e=>e.classList.toggle('shown',e.id===name));document.querySelectorAll('[data-route]').forEach(e=>e.classList.toggle('active',e.dataset.route===name));$('crumb').textContent={overview:'MISSION CONTROL',agents:'AGENT WORKFORCE',tools:'ENTERPRISE TOOLS',audit:'EVIDENCE LEDGER',reviews:'HUMAN REVIEW',workspace:'SPECIALIST WORKSPACE',deliverables:'OUTCOME STUDIO'}[name];window.scrollTo({top:0,behavior:'smooth'});if(name==='reviews')renderReviewQueue();if(name==='audit'&&app.active){$('auditMission').value=app.active;showAudit(app.active)}}
 for(const b of document.querySelectorAll('[data-route]'))b.addEventListener('click',()=>route(b.dataset.route));
 $('topNewMission').onclick=()=>route('overview');$('jumpReview').onclick=()=>route('reviews');$('refreshReviews').onclick=()=>refresh();$('focusGoal').onclick=()=>{$('goal').focus();$('missionComposer').scrollIntoView({behavior:'smooth',block:'center'})};$('jumpWorkflow').onclick=()=>route('tools');$('refresh').onclick=refresh;
 function setMode(mode){app.mode=mode;$('modeLocal').classList.toggle('selected',mode==='local');$('modeModel').classList.toggle('selected',mode==='model');$('modeInfo').innerHTML=mode==='local'?'Local mode uses deterministic keyword routing on synthetic fixtures. It is <strong>not</strong> AI-generated planning.':'Model mode calls your configured Meta-compatible endpoint to select tools and create the mission plan. It requires real working credentials.'}
@@ -34,3 +34,28 @@ async function showAudit(id){try{const d=await api('/api/missions/'+encodeURICom
 $('auditMission').onchange=e=>{if(!e.target.value){$('auditBody').textContent='Select a mission to inspect evidence.';return}showAudit(e.target.value)};
 
 (async()=>{try{await refresh();renderCapabilities(await api('/api/capabilities'));$('connection').textContent='● LOCAL ENGINE'}catch(e){$('connection').textContent='● OFFLINE'}})();
+
+async function downloadPrivatePackage(url,id,token){
+  const response=await fetch(url,{headers:{'X-WORLDTRACE-TOKEN':token}});
+  if(!response.ok)throw Error('Download failed: HTTP '+response.status);
+  const blob=await response.blob();
+  const objectUrl=URL.createObjectURL(blob);
+  try{
+    const anchor=document.createElement('a');
+    anchor.href=objectUrl;anchor.download=id+'.zip';
+    document.body.appendChild(anchor);anchor.click();anchor.remove();
+  }finally{setTimeout(()=>URL.revokeObjectURL(objectUrl),2500)}
+}
+$('buildDeliverable').onclick=async()=>{
+ const token=privateToken();if(!token)return;
+ const button=$('buildDeliverable'),error=$('outcomeError');
+ error.hidden=true;button.disabled=true;button.textContent='Generating actual files…';
+ try{
+  const request={domain:$('outcomeDomain').value,goal:$('outcomeGoal').value.trim(),evidence:$('outcomeEvidence').value};
+  const data=await api('/api/deliverables',{method:'POST',headers:{'Content-Type':'application/json','X-WORLDTRACE-TOKEN':token},body:JSON.stringify(request)});
+  $('outcomeTrace').innerHTML=data.events.map(e=>'<div class="outcome-stage"><span class="step-number">'+String(e.sequence).padStart(2,'0')+'</span><div><b>'+safe(e.agent)+'</b><p>'+safe(e.operation.replaceAll('_',' '))+'</p></div><span class="stage-check">✓</span></div>').join('');
+  $('outcomeDelivery').innerHTML='<div class="delivery-done"><strong>✓ VERIFIED PACKAGE CREATED</strong><p>'+safe(data.id)+' · '+data.files.length+' recorded files · No external changes.</p><button class="primary-btn" id="downloadOutcome">↓ Download actual ZIP deliverable</button></div>';
+  $('downloadOutcome').onclick=async()=>{try{await downloadPrivatePackage(data.download_url,data.id,token)}catch(e){error.hidden=false;error.textContent=e.message}};
+ }catch(e){if(/authorization|403|token/i.test(e.message))app.missionToken=null;error.hidden=false;error.textContent=e.message}
+ finally{button.disabled=false;button.textContent='✦ Produce verified delivery package →'}
+};
