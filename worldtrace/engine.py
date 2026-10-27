@@ -1,7 +1,7 @@
 """WORLDTRACE mission execution with validated dependencies and explicit model provenance."""
 import json
 import threading
-from . import agent, storage, tools, verification
+from . import agent, storage, tools, verification, recovery
 
 AGENT_NAMES = {"pdf_inspect":"Document Analyst","email_inspect":"Communications Analyst","network_inspect":"Network Investigator","etl_compare":"Data Integrity Agent","database_check":"Database Auditor","api_virtualize":"API Simulator","performance_probe":"Performance Engineer","middleware_test":"Integration Tester","mainframe_contract":"Legacy Systems Analyst"}
 
@@ -50,6 +50,8 @@ def run(mid, goal, mode):
         details = storage.get(mid)
         findings = verification.verify(details["tasks"])
         storage.event(mid, "verification.completed", findings)
+        proposals = recovery.recommend(details["tasks"])
+        storage.event(mid, "recovery.proposed", {"proposals": proposals, "human_review_required": True, "executed": False})
         report = ["# WORLDTRACE | Mission Evidence Report", "",
                   f"**Mission:** {mid}", f"**Goal:** {goal}", f"**Execution mode:** {mode}",
                   f"**Plan provenance:** {plan['mode']}", f"**Verification:** {findings['verdict']}", "",
@@ -59,7 +61,13 @@ def run(mid, goal, mode):
         report += ["", "## Tool results"]
         for item in details["tasks"]:
             report += [f"### {item['name']} — {item['status']}", "```json", json.dumps(item["result"], indent=2, default=str), "```", ""]
-        report += ["## Deterministic cross-tool checks", "```json", json.dumps(findings["cross_checks"], indent=2), "```", "",
+        report += ["## Human-reviewed recovery proposals (NOT EXECUTED)", ""]
+        if proposals:
+            for proposal in proposals:
+                report.append(f"- **{proposal['tool']}** [{proposal['status']}]: {proposal['proposed_action']} Owner: {proposal['owner']}. Human approval required.")
+        else:
+            report.append("- No corrective action proposals needed for the executed fixture checks.")
+        report += ["", "## Deterministic cross-tool checks", "```json", json.dumps(findings["cross_checks"], indent=2), "```", "",
                    "## Reliability notes",
                    "- Evidence originates from synthetic LOCAL sample fixtures.",
                    "- AI planning occurs only when model mode logged a successful actual provider response.",
