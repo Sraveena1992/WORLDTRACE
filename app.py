@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException, Header
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from worldtrace import agent,engine,storage,tools,samples
+from worldtrace import agent,engine,storage,tools,samples,delivery
 
 app=FastAPI(title='WORLDTRACE',version='0.1.0',description='Verifiable local workflow prototype with optional actual Meta-model orchestration')
 STATIC=Path(__file__).parent/'static'
@@ -15,6 +15,11 @@ app.mount('/assets',StaticFiles(directory=STATIC),name='assets')
 class MissionIn(BaseModel):
     goal:str=Field(min_length=12,max_length=1500)
     mode:str='local'
+
+class DeliverableIn(BaseModel):
+    goal: str=Field(min_length=12,max_length=1500)
+    evidence: str=Field(default='',max_length=12000)
+    domain: str='supplier_onboarding'
 
 class RecoveryReviewIn(BaseModel):
     tool: str=Field(min_length=2,max_length=64)
@@ -117,3 +122,21 @@ def tool_run_detail(run_id:str):
     run=storage.get_tool_run(run_id)
     if run is None:raise HTTPException(404,'Run not found')
     return run
+
+
+@app.post('/api/deliverables',status_code=201)
+def create_deliverable(req:DeliverableIn, x_worldtrace_token: str | None = Header(default=None)):
+    """Protected genuine artifact generation; explicitly deterministic, not Meta AI."""
+    require_mission_token(x_worldtrace_token)
+    try:return delivery.produce(req.goal, req.evidence, req.domain)
+    except ValueError as exc:raise HTTPException(422,str(exc)) from exc
+
+@app.get('/api/deliverables/{deliverable_id}/download')
+def download_deliverable(deliverable_id:str, x_worldtrace_token: str | None = Header(default=None)):
+    require_mission_token(x_worldtrace_token)
+    import re
+    if not re.fullmatch(r'WD-[A-F0-9]{12}', deliverable_id):
+        raise HTTPException(404,'Deliverable not found')
+    path=storage.root()/'deliverables'/deliverable_id/f'{deliverable_id}.zip'
+    if not path.is_file():raise HTTPException(404,'Deliverable not found')
+    return FileResponse(path,media_type='application/zip',filename=f'{deliverable_id}.zip')
