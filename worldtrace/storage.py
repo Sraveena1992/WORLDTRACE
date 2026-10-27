@@ -15,6 +15,7 @@ def connect():
     conn.execute('CREATE TABLE IF NOT EXISTS missions(id TEXT PRIMARY KEY, goal TEXT NOT NULL, status TEXT NOT NULL, created TEXT NOT NULL, updated TEXT NOT NULL, mode TEXT NOT NULL, error TEXT DEFAULT "")')
     conn.execute('CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY AUTOINCREMENT, mission_id TEXT NOT NULL, time TEXT NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL, prev_hash TEXT NOT NULL, event_hash TEXT NOT NULL)')
     conn.execute('CREATE TABLE IF NOT EXISTS tasks(id TEXT PRIMARY KEY, mission_id TEXT NOT NULL, name TEXT NOT NULL, tool TEXT NOT NULL, status TEXT NOT NULL, result TEXT NOT NULL DEFAULT "{}", ord INTEGER NOT NULL)')
+    conn.execute('CREATE TABLE IF NOT EXISTS reviews(mission_id TEXT NOT NULL, tool TEXT NOT NULL, decision TEXT NOT NULL, reviewer TEXT NOT NULL, note TEXT NOT NULL, reviewed_at TEXT NOT NULL, PRIMARY KEY(mission_id,tool))')
     conn.commit();return conn
 
 def make_mission(goal,mode):
@@ -51,6 +52,29 @@ def get(mid):
         ts=c.execute('SELECT * FROM tasks WHERE mission_id=? ORDER BY ord',(mid,)).fetchall()
         es=c.execute('SELECT * FROM events WHERE mission_id=? ORDER BY id',(mid,)).fetchall()
     return {**dict(m),'tasks':[{**dict(t),'result':json.loads(t['result'])} for t in ts],'events':[{**dict(e),'payload':json.loads(e['payload'])} for e in es]}
+
+def record_review(mid, tool, decision, reviewer, note):
+    '''Store a one-time human disposition of an existing recovery proposal; never execute it.'''
+    with LOCK:
+        mission = get(mid)
+        if mission is None:
+            raise ValueError('Mission not found')
+        if mission['status'] != 'completed':
+            raise ValueError('Mission must be completed before review')
+        proposals = [p for e in mission['events'] if e['kind'] == 'recovery.proposed' for p in e['payload'].get('proposals', [])]
+        if not any(p['tool'] == tool for p in proposals):
+            raise ValueError('Tool has no proposed recovery action')
+        stamp = utc()
+        with connect() as c:
+            if c.execute('SELECT 1 FROM reviews WHERE mission_id=? AND tool=?', (mid, tool)).fetchone():
+                raise ValueError('Recovery proposal already reviewed')
+            c.execute('INSERT INTO reviews VALUES(?,?,?,?,?,?)', (mid, tool, decision, reviewer, note, stamp))
+        event(mid, 'recovery.reviewed', {'tool': tool, 'decision': decision, 'reviewer': reviewer, 'note': note, 'executed': False, 'reviewed_at': stamp})
+        return {'mission_id': mid, 'tool': tool, 'decision': decision, 'reviewer': reviewer, 'note': note, 'executed': False, 'reviewed_at': stamp}
+
+def reviews(mid):
+    with LOCK, connect() as c:
+        return [dict(row) for row in c.execute('SELECT * FROM reviews WHERE mission_id=? ORDER BY reviewed_at,tool', (mid,)).fetchall()]
 
 def listing():
     with LOCK,connect() as c: return [dict(x) for x in c.execute('SELECT * FROM missions ORDER BY created DESC LIMIT 50').fetchall()]
