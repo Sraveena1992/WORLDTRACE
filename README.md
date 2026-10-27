@@ -16,6 +16,7 @@ WORLDTRACE transforms an enterprise mission into a **recorded execution** involv
 | Events / task state persistence | Yes, SQLite |
 | Per-mission SHA-256 audit chain | Yes; application DB is not immutable or externally anchored |
 | Actual downloadable evidence report | Yes, Markdown |
+| Human review of recovery proposals | Protected API records one-time approve-for-manual-follow-up or reject decision in audit chain; no automated repair |
 | Meta-model-driven tool selection | Optional via configured real OpenAI-compatible inference endpoint; **not verified without provider access** |
 | Browser automation, real email sending, hosted mainframes | Not implemented |
 | Actual repair of production systems | Not implemented; prohibited in this demo |
@@ -64,6 +65,10 @@ WORLDTRACE_MISSION_TOKEN=GENERATE_A_LONG_RANDOM_SECRET
 ```
 
 **The endpoint format, model name, authorization method, inference credit access, and model usage must be verified with your actual provider.** The dashboard asks for `WORLDTRACE_MISSION_TOKEN` only when starting a model-mode mission; it is held in tab memory, not in localStorage. Never enter the provider API key in the dashboard. A configured endpoint is NOT evidence of successful inference. This example is not proof of successful connectivity. Meta Model API may require a payment method even when credits have been granted. Do not incur charges without understanding billing. This prototype does not ship with credentials.
+
+## Human review API (bounded)
+
+`POST /api/missions/{mission_id}/reviews` requires the `X-WORLDTRACE-TOKEN` header, and a JSON body with `tool`, `decision` (`approve_for_manual_followup` or `reject`), `reviewer`, and optional `note`. This records a one-time decision about an existing recovery proposal after the synthetic mission has completed. `GET /api/missions/{mission_id}/reviews` also requires the private token. This does not execute remediation or authenticate individual users, and the token must never be committed or shared. The visual reviewer interface is not implemented yet.
 
 ## Execution flow
 
