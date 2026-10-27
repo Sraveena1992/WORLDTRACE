@@ -3,6 +3,7 @@ import json
 import os
 import httpx
 from .planning import validate_plan, InvalidPlan
+from .local_routing import select_local_tools
 
 DEFAULT_TOOLS = ["pdf_inspect","email_inspect","network_inspect","etl_compare","database_check","api_virtualize","performance_probe","middleware_test","mainframe_contract"]
 
@@ -26,7 +27,8 @@ def _decode(raw):
 
 def make_plan(goal, use_model):
     if not use_model:
-        return {"mode": "local-workflow", **validate_plan({"reason": "Fixed auditable local workflow; NOT AI generated", "tasks": DEFAULT_TOOLS})}
+        selected, reason = select_local_tools(goal)
+        return {"mode": "local-workflow", **validate_plan({"reason": reason, "tasks": selected})}
     if not configured():
         raise ModelUnavailable("Meta inference is not configured. Set a verified HTTPS provider and key.")
     base = os.environ["WORLDTRACE_MODEL_BASE_URL"].rstrip("/")
