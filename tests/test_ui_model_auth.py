@@ -4,7 +4,8 @@ from pathlib import Path
 JS = (Path(__file__).resolve().parents[1] / "static" / "app.js").read_text(encoding="utf-8")
 
 def test_model_mode_sends_private_mission_header():
-    assert "headers['X-WORLDTRACE-TOKEN']=app.missionToken" in JS
+    assert "headers['X-WORLDTRACE-TOKEN']=token" in JS
+    assert "const token=privateToken()" in JS
     assert "app.mode==='model'" in JS
 
 def test_private_mission_token_not_persisted_in_browser_storage():
