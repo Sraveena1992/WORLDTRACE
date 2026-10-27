@@ -16,6 +16,7 @@ def connect():
     conn.execute('CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY AUTOINCREMENT, mission_id TEXT NOT NULL, time TEXT NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL, prev_hash TEXT NOT NULL, event_hash TEXT NOT NULL)')
     conn.execute('CREATE TABLE IF NOT EXISTS tasks(id TEXT PRIMARY KEY, mission_id TEXT NOT NULL, name TEXT NOT NULL, tool TEXT NOT NULL, status TEXT NOT NULL, result TEXT NOT NULL DEFAULT "{}", ord INTEGER NOT NULL)')
     conn.execute('CREATE TABLE IF NOT EXISTS reviews(mission_id TEXT NOT NULL, tool TEXT NOT NULL, decision TEXT NOT NULL, reviewer TEXT NOT NULL, note TEXT NOT NULL, reviewed_at TEXT NOT NULL, PRIMARY KEY(mission_id,tool))')
+    conn.execute('CREATE TABLE IF NOT EXISTS tool_runs(id TEXT PRIMARY KEY, tool TEXT NOT NULL, status TEXT NOT NULL, result TEXT NOT NULL, started TEXT NOT NULL, completed TEXT NOT NULL)')
     conn.commit();return conn
 
 def make_mission(goal,mode):
@@ -90,3 +91,30 @@ def verify_chain(mid):
         if h!=e['event_hash'] or prev!=e['prev_hash']:return False
         prev=h
     return True
+
+
+def record_tool_run(tool, status, result):
+    """Persist a bounded standalone fixture-tool run for direct module workflows."""
+    run_id = 'TR-' + uuid4().hex[:12].upper()
+    stamp = utc()
+    with LOCK, connect() as c:
+        c.execute('INSERT INTO tool_runs(id,tool,status,result,started,completed) VALUES(?,?,?,?,?,?)',
+                  (run_id,tool,status,json.dumps(result,sort_keys=True,default=str),stamp,stamp))
+    return {'id':run_id,'tool':tool,'status':status,'result':result,'started':stamp,'completed':stamp,'source':'synthetic local fixture'}
+
+def get_tool_run(run_id):
+    with LOCK, connect() as c:
+        row=c.execute('SELECT * FROM tool_runs WHERE id=?',(run_id,)).fetchone()
+    if row is None:return None
+    result=dict(row)
+    result['result']=json.loads(result['result'])
+    result['source']='synthetic local fixture'
+    return result
+
+def list_tool_runs(tool=None, limit=30):
+    with LOCK, connect() as c:
+        if tool:
+            rows=c.execute('SELECT * FROM tool_runs WHERE tool=? ORDER BY started DESC LIMIT ?',(tool,limit)).fetchall()
+        else:
+            rows=c.execute('SELECT * FROM tool_runs ORDER BY started DESC LIMIT ?',(limit,)).fetchall()
+    return [{**dict(row),'result':json.loads(row['result']),'source':'synthetic local fixture'} for row in rows]
