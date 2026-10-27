@@ -87,3 +87,37 @@ button:focus-visible,a:focus-visible,select:focus-visible{outline:2px solid #74e
 @media(max-width:1200px){.hero h1{font-size:50px}.workspace-path{gap:8px;padding:14px}.orb-wrap{transform:scale(.85)}}
 @media(max-width:900px){.workspace-path{flex-wrap:wrap}.workspace-path i{display:none}.workspace-path>span{min-width:40%}.review-item{align-items:flex-start;flex-direction:column}.review-decision{justify-content:flex-start}}
 @media(max-width:760px){.brand{padding:0 0 12px}.mark{height:40px;width:40px}.hero{min-height:auto;padding:24px 21px 0}.hero h1{font-size:43px}.hero-columns{display:block}.hero p{font-size:13px}.hero-actions{margin:22px 0}.orb-wrap{height:140px;transform:scale(.58);margin:-34px auto}.top-action{padding:8px 10px;font-size:10px}.workspace-path>span{min-width:42%}.workspace-path small{display:none}.review-summary{display:block}.metric{padding:17px}.panel{padding:20px}}
+
+/* Specialist execution workspaces v7 */
+.workspace-heading{display:flex;align-items:center;justify-content:space-between;gap:25px;margin-bottom:25px}
+.workspace-heading .page-title{margin:15px 0 12px}
+.workspace-heading .page-intro{margin-bottom:0}
+.workspace-tag{border:1px solid #3e6679;border-radius:10px;padding:13px 18px;color:#8beedf;background:#153348;font-size:11px;letter-spacing:.12em;white-space:nowrap}
+.workspace-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:19px;align-items:start}
+.input-record{background:linear-gradient(110deg,#123447,#18243d);border:1px solid #3c6d7e;border-radius:12px;padding:22px;margin-bottom:28px}
+.input-record-title{font:600 20px 'Space Grotesk',sans-serif;color:#e5f6ff;margin-bottom:12px;overflow-wrap:anywhere}
+.workspace-stage-label{margin-bottom:14px}
+.workspace-steps{list-style:none;counter-reset:none;padding:0;margin:0 0 28px}
+.workspace-steps li{display:flex;gap:15px;align-items:center;border-bottom:1px solid #28394c;padding:13px 0;color:#d0dfed;font-size:13px;line-height:1.5}
+.step-number{color:#70ecd9;font:700 12px 'Space Grotesk',sans-serif;background:#1c3449;border:1px solid #315b73;border-radius:8px;padding:8px 10px}
+.workspace-limits{border-left:3px solid #e5aa6e;background:#35261d7a;padding:14px 17px;color:#f3c9aa;font-size:12px;line-height:1.7;margin-bottom:24px}
+.module-result-placeholder{padding:45px 15px;color:#a0b3ca;text-align:center;border:1px dashed #3b5067;border-radius:12px;font-size:13px;line-height:1.8}
+.result-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0 19px;color:#d1ebf6}
+.run-status{border-radius:7px;padding:6px 10px;font-size:10px;font-weight:800;letter-spacing:.09em;border:1px solid #567088;color:#b6cbdc}
+.run-status.passed{color:#8ce8be;border-color:#397b60;background:#183b3055}
+.run-status.finding{color:#ffcf86;border-color:#806347;background:#513c2455}
+.run-status.error{color:#ff9ba9;border-color:#8e5364;background:#44232b55}
+.result-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 25px}
+.result-fact{border:1px solid #2e465b;background:#0c1a2b;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:7px;min-width:0}
+.result-fact span{text-transform:uppercase;letter-spacing:.12em;color:#7c98b2;font-size:9px}
+.result-fact b{font-size:14px;color:#e8f5ff;overflow-wrap:anywhere}
+.result-json{overflow:auto;max-height:360px;background:#08131f;border:1px solid #293d54;border-radius:10px;color:#acd9dc;padding:18px;font:11px/1.7 ui-monospace,Consolas,monospace}
+.result-footer{color:#809aaf;font-size:10px;line-height:1.6;margin-top:14px}
+.workspace-history-header{margin-top:33px}
+.workspace-history{display:grid;gap:8px;max-height:290px;overflow-y:auto}
+.workspace-run-record{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#0d1b2b;border:1px solid #304459;border-radius:9px;padding:12px 14px;color:#d3eafa;text-align:left}
+.workspace-run-record:hover{border-color:#65d2c5;background:#142b3d}
+.workspace-run-record strong,.workspace-run-record small{display:block}
+.workspace-run-record small{font-size:10px;color:#809cb5;margin-top:5px}
+@media(max-width:1020px){.workspace-columns{grid-template-columns:1fr}.workspace-heading{align-items:flex-start;flex-direction:column}}
+@media(max-width:760px){.workspace-tag{white-space:normal}.result-facts{grid-template-columns:1fr}}
