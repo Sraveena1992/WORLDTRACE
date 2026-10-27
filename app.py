@@ -1,6 +1,8 @@
 """WORLDTRACE API and Mission Control application."""
 from pathlib import Path
-from fastapi import FastAPI, HTTPException
+import os
+import secrets
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -33,8 +35,14 @@ def capabilities():
 def missions():return storage.listing()
 
 @app.post('/api/missions',status_code=202)
-def create(req:MissionIn):
+def create(req:MissionIn, x_worldtrace_token: str | None = Header(default=None)):
     if req.mode not in ('local','model'):raise HTTPException(422,'mode must be local or model')
+    if req.mode == 'model':
+        expected = os.getenv('WORLDTRACE_MISSION_TOKEN', '')
+        if not expected:
+            raise HTTPException(503,'Model missions are disabled until a private mission token is configured')
+        if not x_worldtrace_token or not secrets.compare_digest(x_worldtrace_token, expected):
+            raise HTTPException(403,'Model mission authorization required')
     try:mid=engine.start(req.goal,req.mode)
     except agent.ModelUnavailable as ex:raise HTTPException(424,str(ex))
     return {'id':mid,'status':'queued','mode':req.mode}
