@@ -15,8 +15,11 @@ def test_capabilities():
 def test_reject_short_mission():assert client.post('/api/missions',json={'goal':'abc','mode':'local'}).status_code==422
 
 def test_model_requires_key(monkeypatch):
-    monkeypatch.delenv('WORLDTRACE_MODEL_BASE_URL',raising=False);monkeypatch.delenv('WORLDTRACE_MODEL_API_KEY',raising=False)
-    assert client.post('/api/missions',json={'goal':'Inspect the supplier onboarding files','mode':'model'}).status_code==424
+    monkeypatch.delenv('WORLDTRACE_MODEL_BASE_URL',raising=False)
+    monkeypatch.delenv('WORLDTRACE_MODEL_API_KEY',raising=False)
+    monkeypatch.setenv('WORLDTRACE_MISSION_TOKEN', 'test-only-mission-token')
+    response = client.post('/api/missions', json={'goal': 'Inspect the supplier onboarding files', 'mode': 'model'}, headers={'X-WORLDTRACE-TOKEN': 'test-only-mission-token'})
+    assert response.status_code == 424
 
 def test_real_tools():
     results={name:tools.execute(name) for name in tools.AVAILABLE}
