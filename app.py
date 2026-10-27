@@ -85,3 +85,35 @@ def list_recovery_reviews(mission_id:str, x_worldtrace_token: str | None = Heade
     require_mission_token(x_worldtrace_token)
     if not storage.get(mission_id):raise HTTPException(404,'Mission not found')
     return storage.reviews(mission_id)
+
+
+@app.get('/api/tools/{tool_id}/workspace')
+def tool_workspace(tool_id:str):
+    """Describe the exact fixture input and procedure for one bounded tool."""
+    if tool_id not in tools.AVAILABLE:raise HTTPException(404,'Tool not available')
+    from worldtrace.tool_workspaces import DETAILS
+    return {'tool':tool_id,**DETAILS[tool_id], 'access':'Synthetic test fixtures only; no external account integration'}
+
+@app.post('/api/tools/{tool_id}/runs',status_code=201)
+def run_single_tool(tool_id:str):
+    """Run an allowlisted fixture tool as a standalone inspection, not an AI mission."""
+    if tool_id not in tools.AVAILABLE:raise HTTPException(404,'Tool not available')
+    samples.ensure()
+    try:
+        result=tools.execute(tool_id)
+        status='passed' if result.get('pass') else 'finding'
+    except Exception as exc:
+        result={'error':str(exc)[:240]}
+        status='error'
+    return storage.record_tool_run(tool_id,status,result)
+
+@app.get('/api/tools/{tool_id}/runs')
+def tool_run_history(tool_id:str):
+    if tool_id not in tools.AVAILABLE:raise HTTPException(404,'Tool not available')
+    return storage.list_tool_runs(tool_id)
+
+@app.get('/api/tool-runs/{run_id}')
+def tool_run_detail(run_id:str):
+    run=storage.get_tool_run(run_id)
+    if run is None:raise HTTPException(404,'Run not found')
+    return run
