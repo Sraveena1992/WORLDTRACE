@@ -66,6 +66,10 @@ WORLDTRACE_MISSION_TOKEN=GENERATE_A_LONG_RANDOM_SECRET
 
 **The endpoint format, model name, authorization method, inference credit access, and model usage must be verified with your actual provider.** The dashboard asks for `WORLDTRACE_MISSION_TOKEN` only when starting a model-mode mission; it is held in tab memory, not in localStorage. Never enter the provider API key in the dashboard. A configured endpoint is NOT evidence of successful inference. This example is not proof of successful connectivity. Meta Model API may require a payment method even when credits have been granted. Do not incur charges without understanding billing. This prototype does not ship with credentials.
 
+## Standalone specialist workspaces
+
+Agent Workforce and Enterprise Tools cards now open the corresponding tool's own interactive workspace rather than merely pre-populating a generic mission. Every module explains its approved sample input, exact analysis sequence, limits, live Run action, real backend output and prior recorded runs. The API uses `GET /api/tools/{tool_id}/workspace`, `POST /api/tools/{tool_id}/runs`, `GET /api/tools/{tool_id}/runs` and `GET /api/tool-runs/{run_id}`. These are **bounded synthetic fixture analyses**, not production connectors or actual user file uploads. Standalone tool runs are persisted in local SQLite and are not the same as hash-chained multi-tool mission events. On free Render, this storage remains ephemeral. These public demo endpoints have no user-level authentication.
+
 ## Human review API (bounded)
 
 `POST /api/missions/{mission_id}/reviews` requires the `X-WORLDTRACE-TOKEN` header, and a JSON body with `tool`, `decision` (`approve_for_manual_followup` or `reject`), `reviewer`, and optional `note`. This records a one-time decision about an existing recovery proposal after the synthetic mission has completed. `GET /api/missions/{mission_id}/reviews` also requires the private token. This does not execute remediation or authenticate individual users, and the token must never be committed or shared. The visual reviewer interface is not implemented yet.
