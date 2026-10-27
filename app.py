@@ -16,6 +16,19 @@ class MissionIn(BaseModel):
     goal:str=Field(min_length=12,max_length=1500)
     mode:str='local'
 
+class RecoveryReviewIn(BaseModel):
+    tool: str=Field(min_length=2,max_length=64)
+    decision: str
+    reviewer: str=Field(min_length=2,max_length=80)
+    note: str=Field(default='',max_length=500)
+
+def require_mission_token(token):
+    expected=os.getenv('WORLDTRACE_MISSION_TOKEN','')
+    if not expected:
+        raise HTTPException(503,'Private mission review and model operations are disabled')
+    if not token or not secrets.compare_digest(token,expected):
+        raise HTTPException(403,'Private mission authorization required')
+
 @app.on_event('startup')
 def startup():samples.ensure()
 
@@ -38,11 +51,7 @@ def missions():return storage.listing()
 def create(req:MissionIn, x_worldtrace_token: str | None = Header(default=None)):
     if req.mode not in ('local','model'):raise HTTPException(422,'mode must be local or model')
     if req.mode == 'model':
-        expected = os.getenv('WORLDTRACE_MISSION_TOKEN', '')
-        if not expected:
-            raise HTTPException(503,'Model missions are disabled until a private mission token is configured')
-        if not x_worldtrace_token or not secrets.compare_digest(x_worldtrace_token, expected):
-            raise HTTPException(403,'Model mission authorization required')
+        require_mission_token(x_worldtrace_token)
     try:mid=engine.start(req.goal,req.mode)
     except agent.ModelUnavailable as ex:raise HTTPException(424,str(ex))
     return {'id':mid,'status':'queued','mode':req.mode}
@@ -60,3 +69,19 @@ def report(mission_id:str):
     p=storage.root()/'reports'/f'{mission_id}.md'
     if not p.exists():raise HTTPException(409,'Report is not ready')
     return PlainTextResponse(p.read_text(),headers={'Content-Disposition':f'attachment; filename="{mission_id}.md"'})
+
+@app.post('/api/missions/{mission_id}/reviews',status_code=201)
+def review_recovery(mission_id:str, req:RecoveryReviewIn, x_worldtrace_token: str | None = Header(default=None)):
+    require_mission_token(x_worldtrace_token)
+    if req.decision not in ('approve_for_manual_followup','reject'):
+        raise HTTPException(422,'decision must be approve_for_manual_followup or reject')
+    try:
+        return storage.record_review(mission_id,req.tool,req.decision,req.reviewer,req.note)
+    except ValueError as exc:
+        raise HTTPException(404 if str(exc)=='Mission not found' else 409,str(exc)) from exc
+
+@app.get('/api/missions/{mission_id}/reviews')
+def list_recovery_reviews(mission_id:str, x_worldtrace_token: str | None = Header(default=None)):
+    require_mission_token(x_worldtrace_token)
+    if not storage.get(mission_id):raise HTTPException(404,'Mission not found')
+    return storage.reviews(mission_id)
