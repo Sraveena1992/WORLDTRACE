@@ -121,3 +121,14 @@ button:focus-visible,a:focus-visible,select:focus-visible{outline:2px solid #74e
 .workspace-run-record small{font-size:10px;color:#809cb5;margin-top:5px}
 @media(max-width:1020px){.workspace-columns{grid-template-columns:1fr}.workspace-heading{align-items:flex-start;flex-direction:column}}
 @media(max-width:760px){.workspace-tag{white-space:normal}.result-facts{grid-template-columns:1fr}}
+
+/* Evidence-to-delivery Outcome Studio */
+.outcome-textarea{display:block;width:100%;background:#0a1524;color:#eef6ff;border:1px solid #405269;border-radius:10px;padding:16px;min-height:110px;resize:vertical;margin:9px 0 25px;font:13px/1.7 'DM Sans',sans-serif}
+.outcome-textarea.evidence-area{min-height:190px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.outcome-textarea:focus-visible{outline:2px solid #59d9ce}
+.outcome-trace{display:grid;gap:10px}
+.outcome-stage{display:flex;gap:13px;align-items:center;background:#0d1b2d;border:1px solid #30475e;border-radius:10px;padding:14px}
+.outcome-stage>div{flex:1}.outcome-stage b{font-size:13px}.outcome-stage p{color:#a2b8ca;font-size:11px;margin:5px 0}
+.stage-check{font-size:20px;color:#75e8b6}
+.delivery-done{margin-top:25px;padding:23px;border:1px solid #317d67;background:#15372c66;border-radius:12px;color:#c2fff0}
+.delivery-done p{font-size:12px;color:#a0cdbb;margin:12px 0 20px}
