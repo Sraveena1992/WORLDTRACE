@@ -1,0 +1,5 @@
+{
+  "endpoint": "/api/onboarding/validate",
+  "expected_status": 200,
+  "simulated_status": 503
+}
