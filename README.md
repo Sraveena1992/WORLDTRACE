@@ -19,7 +19,7 @@ WORLDTRACE transforms an enterprise mission into a **recorded execution** involv
 | Meta-model-driven tool selection | Optional via configured real OpenAI-compatible inference endpoint; **not verified without provider access** |
 | Browser automation, real email sending, hosted mainframes | Not implemented |
 | Actual repair of production systems | Not implemented; prohibited in this demo |
-| Production-grade access control / approvals | Not implemented; restrict deployment to public synthetic demo |
+| Production-grade access control / approvals | Not implemented; model mission submission is protected by a private header token, but local runs, mission listing and reports are public; synthetic demo only |
 | Industry-scale enterprise testing | Not claimed |
 
 ### Why this matters
@@ -38,7 +38,7 @@ pip install -r requirements.txt
 uvicorn app:app --reload
 ```
 
-Open **http://127.0.0.1:8000**. The default local workflow runs with zero API credentials, using synthetic test data and deterministic steps. **This mode is not model-driven agent autonomy.** Use **META MODEL** only after configuring real inference.
+Open **http://127.0.0.1:8000**. The local workflow runs with zero API credentials, using synthetic test data and deterministic keyword-based tool routing (broad or ambiguous missions run all nine tools). **This mode is not model-driven agent autonomy.** Use **META MODEL** only after configuring real inference.
 
 To verify:
 
@@ -60,16 +60,17 @@ WORLDTRACE_MODEL_BASE_URL=https://YOUR-VERIFIED-PROVIDER/v1
 WORLDTRACE_MODEL_API_KEY=YOUR_PRIVATE_KEY
 WORLDTRACE_MODEL_NAME=meta-models/muse-spark-open-1026
 WORLDTRACE_MODEL_PROVIDER=your-provider-name
+WORLDTRACE_MISSION_TOKEN=GENERATE_A_LONG_RANDOM_SECRET
 ```
 
-**The endpoint format, model name, authorization method, inference credit access, and model usage must be verified with your actual provider.** This example is not proof of successful connectivity. Meta Model API may require a payment method even when credits have been granted. Do not incur charges without understanding billing. This prototype does not ship with credentials.
+**The endpoint format, model name, authorization method, inference credit access, and model usage must be verified with your actual provider.** The dashboard asks for `WORLDTRACE_MISSION_TOKEN` only when starting a model-mode mission; it is held in tab memory, not in localStorage. Never enter the provider API key in the dashboard. A configured endpoint is NOT evidence of successful inference. This example is not proof of successful connectivity. Meta Model API may require a payment method even when credits have been granted. Do not incur charges without understanding billing. This prototype does not ship with credentials.
 
 ## Execution flow
 
 ```text
 User mission
     ↓
-Local fixed plan OR configured Meta model-driven plan
+Deterministic mission-scoped local plan OR configured Meta model-driven plan
     ↓
 Validate tool ID allowlist and boundaries
     ↓
@@ -100,12 +101,13 @@ These are real computations over included generated **synthetic** files, not cla
 - Model-selected tool identifiers must be on the allowlist.
 - External side effects, sending emails, production system edits and destructive actions are absent.
 - All included business entities, test data, network addresses and documents are synthetic.
-- No actual production information, secrets or customer files should be uploaded to this unauthenticated prototype.
+- Public routes still permit local synthetic missions, history listing and evidence report access without login. Never use real production information or customer files here.
+- Model mission POST requires the private `X-WORLDTRACE-TOKEN` request header and a matching `WORLDTRACE_MISSION_TOKEN` environment variable. This is narrow API protection, not a full user authentication/authorization system.
 - Audit chaining is tamper-evident only while the chain verifier and persisted data remain trusted; no cryptographic signatures or external anchoring are provided.
 
 ## Competition honesty
 
-This is an initial hackathon build foundation, **not a completed fully autonomous robotics product**. Actual Meta model usage, operational reliability, security governance, richer execution/replanning, visual evidence analysis, interactive approval gates, and real external integrations are future build stages and must be tested before making submission claims. Startups track reward details and rules should be checked against the organizer's latest published materials.
+This is an initial hackathon build foundation, **not a completed fully autonomous robotics product**. Successful real Meta model inference, operational reliability, production security governance, richer execution/replanning, visual evidence analysis, enforced human approval gates, and external integrations are outstanding build stages and must be tested before making submission claims. Startups track reward details and rules should be checked against the organizer's latest published materials.
 
 ## Deployment
 
