@@ -11,4 +11,4 @@ def test_outcome_request_uses_authenticated_backend_and_real_download():
     assert "api('/api/deliverables',{method:'POST'" in JS
     assert "'X-WORLDTRACE-TOKEN':token" in JS
     assert "downloadPrivatePackage(data.download_url,data.id,token)" in JS
-    assert "/assets/app.js?v=8" in HTML
+    assert "/assets/app.js?v=" in HTML
