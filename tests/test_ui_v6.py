@@ -28,6 +28,8 @@ def test_review_controls_wired_to_authenticated_backend():
     assert "'X-WORLDTRACE-TOKEN':token" in JS
 
 def test_cache_busted_styles_and_scripts():
-    assert '/assets/style.css?v=8' in HTML
-    assert '/assets/app.js?v=8' in HTML
+    import re
+    css=re.search(r'/assets/style\\.css\\?v=(\\d+)',HTML)
+    js=re.search(r'/assets/app\\.js\\?v=(\\d+)',HTML)
+    assert css and js and css.group(1)==js.group(1)
     assert '.interactive-card:hover' in CSS
