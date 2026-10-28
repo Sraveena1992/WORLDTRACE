@@ -97,3 +97,35 @@ def make_followup_plan(goal, tasks):
                 "provider_response_id":data.get("id",""), **plan}
     except (httpx.HTTPError, KeyError, ValueError, TypeError, InvalidPlan) as exc:
         raise ModelUnavailable("Adaptive model follow-up failed: "+str(exc)[:300]) from exc
+
+def probe_provider():
+    """Explicit one-shot REAL inference probe. Never sends mission data or secrets in output."""
+    if not configured():
+        raise ModelUnavailable("Provider URL and API key are not configured")
+    base=os.getenv("WORLDTRACE_MODEL_BASE_URL","").rstrip("/")
+    if not base.startswith("https://"):
+        raise ModelUnavailable("HTTPS inference endpoint required")
+    name=os.getenv("WORLDTRACE_MODEL_NAME","meta-models/muse-spark-open-1026")
+    payload={"model":name,
+             "messages":[{"role":"system","content":"Return the word READY only."},
+                         {"role":"user","content":"Connectivity check. Reply READY."}],
+             "max_tokens":24,"temperature":0}
+    try:
+        with httpx.Client(timeout=20) as client:
+            response=client.post(base+"/chat/completions",json=payload,
+                headers={"Authorization":"Bearer "+os.environ["WORLDTRACE_MODEL_API_KEY"]})
+            response.raise_for_status()
+            data=response.json()
+        output=data["choices"][0]["message"]["content"]
+        if not isinstance(output,(str,list)) or not output:
+            raise ValueError("Empty model response")
+        return {"connected":True,"inference_verified":True,
+                "requested_model":name,"returned_model":data.get("model",name),
+                "provider":os.getenv("WORLDTRACE_MODEL_PROVIDER","configured endpoint"),
+                "response_id":data.get("id",""),
+                "message":"Actual inference response received; this does not validate mission planning"}
+    except httpx.HTTPStatusError as exc:
+        status=exc.response.status_code
+        raise ModelUnavailable("Provider rejected inference request (HTTP "+str(status)+"). Check credits, key and model access.") from exc
+    except (httpx.HTTPError,KeyError,ValueError,TypeError) as exc:
+        raise ModelUnavailable("Model inference probe failed; connection not verified: "+type(exc).__name__) from exc
