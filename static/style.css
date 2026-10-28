@@ -194,3 +194,6 @@ button:focus-visible,a:focus-visible,select:focus-visible{outline:2px solid #74e
 .unified-review-action p{font-size:12px;color:#c6dce4}
 .unified-review-action .tiny-btn{margin:5px}
 .unified-review-action small{color:#8dbdcc}
+
+.model-probe-btn{margin-top:10px;font-size:10px;text-align:left;white-space:normal;line-height:1.5;width:100%}
+.model-probe-result{margin-top:8px;font-size:11px;color:#a8dfd5;overflow-wrap:anywhere;line-height:1.45}
