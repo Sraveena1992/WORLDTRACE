@@ -232,3 +232,10 @@ def unified_decision(mission_id:str,req:UnifiedDecisionIn,
     try:return unified_records.decide(mission_id,req.action_index,req.decision,req.reviewer,req.note)
     except ValueError as exc:
         raise HTTPException(404 if 'not found' in str(exc) else 409,str(exc)) from exc
+
+@app.post('/api/model/probe')
+def probe_model_inference(x_worldtrace_token: str | None = Header(default=None)):
+    """Explicit short, potentially billable test request. No private source data sent."""
+    require_mission_token(x_worldtrace_token)
+    try:return agent.probe_provider()
+    except agent.ModelUnavailable as exc:raise HTTPException(424,str(exc)) from exc
