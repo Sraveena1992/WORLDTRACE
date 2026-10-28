@@ -132,3 +132,11 @@ button:focus-visible,a:focus-visible,select:focus-visible{outline:2px solid #74e
 .stage-check{font-size:20px;color:#75e8b6}
 .delivery-done{margin-top:25px;padding:23px;border:1px solid #317d67;background:#15372c66;border-radius:12px;color:#c2fff0}
 .delivery-done p{font-size:12px;color:#a0cdbb;margin:12px 0 20px}
+
+/* v10 per-specialist real file upload */
+.upload-panel{background:linear-gradient(140deg,#15323e,#111e32);border:1px solid #437b87;border-radius:13px;padding:23px;margin:18px 0 24px}
+.upload-panel h3{font:700 19px 'Space Grotesk',sans-serif;color:#e6fcff;margin:12px 0 8px}
+.upload-caption{font-size:11px;color:#a9ced4;line-height:1.65;margin:0 0 20px}
+.upload-input{width:100%;max-width:100%;color:#cfe8f7;background:#0a1828;border:1px solid #436274;border-radius:9px;padding:12px;margin:8px 0 20px;font-size:12px}
+.upload-input::file-selector-button{border:1px solid #5799a3;color:#cdfbf6;background:#1d4654;padding:9px 12px;border-radius:6px;cursor:pointer;margin-right:12px}
+.secondary-run{background:linear-gradient(110deg,#49c7b6,#75a4e2);color:#081b2a}
