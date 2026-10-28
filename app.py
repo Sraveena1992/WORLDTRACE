@@ -178,6 +178,7 @@ async def inspect_uploaded_file(tool_id:str,
 async def run_uploaded_multi_file_mission(
     goal: str = Form(...),
     retain_result: bool = Form(default=False),
+    model_planning: bool = Form(default=False),
     pdf: UploadFile | None = File(default=None),
     email: UploadFile | None = File(default=None),
     har: UploadFile | None = File(default=None),
@@ -199,12 +200,18 @@ async def run_uploaded_multi_file_mission(
             if upload is not None:
                 selected[role] = (upload.filename or "", await upload.read(uploads.MAX_BYTES + 1))
         try:
-            result=multifile.run(goal, selected)
+            model_plan=None
+            if model_planning:
+                try:model_plan=agent.make_uploaded_file_plan(goal,list(selected))
+                except agent.ModelUnavailable as exc:raise HTTPException(424,str(exc)) from exc
+            result=multifile.run(goal, selected, model_plan=model_plan)
             if retain_result:
                 record=unified_records.record(result)
                 result['saved_mission_id']=record['id']
                 result['retention']='Derived findings and report saved in SQLite (no raw files); may be lost on free Render restart'
             return result
+        except HTTPException:
+            raise
         except (ValueError, UnicodeError, KeyError, TypeError) as exc:
             raise HTTPException(422, str(exc)[:220]) from exc
         except Exception as exc:
