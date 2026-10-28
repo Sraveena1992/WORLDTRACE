@@ -180,3 +180,17 @@ button:focus-visible,a:focus-visible,select:focus-visible{outline:2px solid #74e
 .multi-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:22px 0}
 .multi-actions .run-btn{margin:0!important}
 .multi-actions .tiny-btn{padding:14px 16px;border-radius:9px}
+
+/* v13 — opt-in saved outcomes and human review */
+.unified-retain{display:flex;align-items:flex-start;gap:12px;padding:14px;margin:18px 0;background:#142a36;border:1px solid #447782;border-radius:10px;color:#cde8eb;font-size:12px;line-height:1.6}
+.unified-retain input{width:18px;height:18px;accent-color:#52d5bc;flex-shrink:0}
+.unified-saved{margin-top:32px;border-top:1px solid #385568;padding-top:22px}
+.unified-review-box{margin:22px 0;padding:18px;background:#13273a;border:1px solid #3b6172;border-radius:12px}
+.unified-review-box>h3{margin:0 0 8px;font-size:17px}
+.unified-review-box>p{font-size:12px;color:#abcbd4;margin:0 0 15px}
+.unified-review-record{padding:16px;border:1px solid #345069;border-radius:10px;margin-top:15px}
+.unified-review-record>strong{display:block;font-size:13px;overflow-wrap:anywhere}
+.unified-review-action{margin-top:12px;padding:11px;background:#0d1d2d;border-radius:8px}
+.unified-review-action p{font-size:12px;color:#c6dce4}
+.unified-review-action .tiny-btn{margin:5px}
+.unified-review-action small{color:#8dbdcc}
