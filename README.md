@@ -125,3 +125,9 @@ Includes `render.yaml` (Free instance configuration) and `Procfile`. Render's ep
 ## License
 
 MIT. Do not incorporate third-party proprietary code or copyrighted assets without rights. Original WORLDTRACE code is independent of Phaze AI and ACCELQ.
+
+## v11 — Multi-file mission execution
+
+The Multi-File Mission page accepts one instruction plus approved user files (PDF, EML, HAR, paired source/target CSV, API JSON, middleware JSON, or legacy TXT). An authenticated POST to `/api/multi-file-missions/run` executes bounded real-file parsers, correlates HAR failures with simulated API status where applicable, records a hash-linked stage trace, and returns an integrity-hashed Markdown report for download. No raw files are saved in the mission history; do not use confidential customer data in this public prototype. Each file is limited to 2 MiB, combined input to 8 MiB.
+
+**Honest scope:** v11 is a deterministic multi-file engine, not six independent Meta AI agents or general autonomous problem solving. Stage names describe responsibilities. No real-world repairs, production connections or Meta inference occur on this route. The goal describes the output; it is not used to execute arbitrary shell commands. Meta-backed planning awaits a verified eligible inference provider.
