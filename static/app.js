@@ -2,7 +2,7 @@ const $=id=>document.getElementById(id);
 const app={mode:'local',active:null,timer:null,missions:[],tools:[],missionToken:null,workspaceTool:null,workspaceSource:'tools'};
 function safe(t){return String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 async function api(path,opt){const r=await fetch(path,opt);let data;try{data=await r.json()}catch{data={detail:`HTTP ${r.status}`}}if(!r.ok)throw Error(typeof data.detail==='string'?data.detail:`HTTP ${r.status}`);return data}
-function route(name){document.querySelectorAll('.page').forEach(e=>e.classList.toggle('shown',e.id===name));document.querySelectorAll('[data-route]').forEach(e=>e.classList.toggle('active',e.dataset.route===name));$('crumb').textContent={overview:'MISSION CONTROL',agents:'AGENT WORKFORCE',tools:'ENTERPRISE TOOLS',audit:'EVIDENCE LEDGER',reviews:'HUMAN REVIEW',workspace:'SPECIALIST WORKSPACE',deliverables:'OUTCOME STUDIO'}[name];window.scrollTo({top:0,behavior:'smooth'});if(name==='reviews')renderReviewQueue();if(name==='audit'&&app.active){$('auditMission').value=app.active;showAudit(app.active)}}
+function route(name){document.querySelectorAll('.page').forEach(e=>e.classList.toggle('shown',e.id===name));document.querySelectorAll('[data-route]').forEach(e=>e.classList.toggle('active',e.dataset.route===name));$('crumb').textContent={overview:'MISSION CONTROL',agents:'AGENT WORKFORCE',tools:'ENTERPRISE TOOLS',audit:'EVIDENCE LEDGER',reviews:'HUMAN REVIEW',workspace:'SPECIALIST WORKSPACE',deliverables:'OUTCOME STUDIO',multi:'MULTI-FILE MISSION'}[name];window.scrollTo({top:0,behavior:'smooth'});if(name==='reviews')renderReviewQueue();if(name==='audit'&&app.active){$('auditMission').value=app.active;showAudit(app.active)}}
 for(const b of document.querySelectorAll('[data-route]'))b.addEventListener('click',()=>route(b.dataset.route));
 $('topNewMission').onclick=()=>route('overview');$('jumpReview').onclick=()=>route('reviews');$('refreshReviews').onclick=()=>refresh();$('focusGoal').onclick=()=>{$('goal').focus();$('missionComposer').scrollIntoView({behavior:'smooth',block:'center'})};$('jumpWorkflow').onclick=()=>route('tools');$('refresh').onclick=refresh;
 function setMode(mode){app.mode=mode;$('modeLocal').classList.toggle('selected',mode==='local');$('modeModel').classList.toggle('selected',mode==='model');$('modeInfo').innerHTML=mode==='local'?'Local mode uses deterministic keyword routing on synthetic fixtures. It is <strong>not</strong> AI-generated planning.':'Model mode calls your configured Meta-compatible endpoint to select tools and create the mission plan. It requires real working credentials.'}
@@ -133,4 +133,45 @@ $('analyzeUpload').onclick=async()=>{
    if(app.workspaceTool===tool)displayUploadedResult(data);
  }catch(e){if(/403|authorization|token/i.test(e.message))app.missionToken=null;error.hidden=false;error.textContent='Upload analysis failed: '+e.message}
  finally{button.disabled=false;button.textContent='Analyze uploaded file →'}
+};
+
+const multiFields=[
+ ['pdf','multiPdf'],['email','multiEmail'],['har','multiHar'],
+ ['source_csv','multiSource'],['target_csv','multiTarget'],
+ ['api_json','multiApi'],['messages_json','multiMessages'],['legacy_txt','multiLegacy']
+];
+$('multiRun').onclick=async()=>{
+ const error=$('multiError');error.hidden=true;
+ const goal=$('multiGoal').value.trim();
+ const selected=multiFields.filter(([role,id])=>$(id).files?.length);
+ if(goal.length<12){error.hidden=false;error.textContent='Enter an instruction of at least 12 characters.';return}
+ if(!selected.length){error.hidden=false;error.textContent='Select one or more input files.';return}
+ if(selected.some(([role,id])=>$(id).files[0].size>2097152)){
+  error.hidden=false;error.textContent='Each file must be 2 MiB or smaller.';return;
+ }
+ if(!!$('multiSource').files.length !== !!$('multiTarget').files.length){
+  error.hidden=false;error.textContent='For data comparison, select BOTH source and target CSV files.';return;
+ }
+ const token=privateToken();if(!token)return;
+ const btn=$('multiRun');btn.disabled=true;btn.textContent='Executing actual file checks…';
+ try{
+   const body=new FormData();body.append('goal',goal);
+   for(const [role,id] of selected)body.append(role,$(id).files[0]);
+   const res=await fetch('/api/multi-file-missions/run',{
+    method:'POST',headers:{'X-WORLDTRACE-TOKEN':token},body});
+   const data=await res.json().catch(()=>({detail:'Invalid server response'}));
+   if(!res.ok)throw Error(data.detail||'HTTP '+res.status);
+   const findings=data.observations.filter(o=>o.status!=='passed');
+   const intro='<div class="human-result"><div class="human-result-head"><strong>Mission outcome</strong><span class="run-status '+(data.status==='LOCAL_CHECKS_PASSED'?'passed':'finding')+'">'+safe(data.status.replaceAll('_',' '))+'</span></div><p>'+data.observations.length+' actual file analyses complete · '+findings.length+' require review · '+data.cross_checks.length+' cross-file consistency checks.</p><div class="human-result-note">Deterministic parser execution. No Meta inference, no external changes, no sensitive file retention in mission history.</div></div>';
+   const records=data.observations.map(o=>'<div class="outcome-stage"><span class="run-status '+safe(o.status)+'">'+safe(o.status.toUpperCase())+'</span><div><b>'+safe(o.file_name)+'</b><p>'+safe(o.tool)+' · SHA256 '+safe(o.sha256.slice(0,16))+'…</p></div></div>').join('');
+   const correlations=data.cross_checks.map(c=>'<div class="outcome-stage"><strong>'+safe(c.matched?'MATCH':'MISMATCH')+'</strong><div><b>'+safe(c.name)+'</b><p>'+safe(c.basis)+'</p></div></div>').join('');
+   $('multiResults').innerHTML=intro+'<div class="eyebrow">INDIVIDUAL FILE RESULTS</div>'+records+'<div class="eyebrow multi-spaced">CROSS-FILE CHECKS</div>'+(correlations||'<p class="muted">No matching cross-file check for selected types.</p>')+'<div class="eyebrow multi-spaced">EXECUTION TRACE</div>'+data.trace.map(e=>'<div class="outcome-stage"><span class="step-number">'+safe(e.role.split(' ')[0])+'</span><div><b>'+safe(e.role)+'</b><p>'+safe(e.action.replaceAll('_',' '))+'</p></div></div>').join('')+'<button type="button" class="run-btn secondary-run" id="downloadMulti">↓ Download verified Markdown report</button>';
+   $('downloadMulti').onclick=()=>{
+     const blob=new Blob([data.report_markdown],{type:'text/markdown;charset=utf-8'});
+     const url=URL.createObjectURL(blob);
+     const a=document.createElement('a');a.href=url;a.download='WORLDTRACE-multifile-report.md';document.body.appendChild(a);a.click();a.remove();
+     setTimeout(()=>URL.revokeObjectURL(url),3000);
+   };
+ }catch(e){error.hidden=false;error.textContent='Mission failed: '+e.message}
+ finally{btn.disabled=false;btn.textContent='▶ Execute multi-file analysis →'}
 };
