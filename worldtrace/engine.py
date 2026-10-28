@@ -47,6 +47,40 @@ def run(mid, goal, mode):
                 storage.update_task(tid, "error", result)
                 states[step_id] = "error"
                 storage.event(mid, "tool.failed", {"step_id": step_id, "tool": tool, "task_id": tid, "error": result["error"]})
+        # A bounded second reasoning cycle is exclusive to actual model mode.
+        # Local mode remains strictly deterministic and does not call inference.
+        followup = None
+        if mode == "model":
+            initial = storage.get(mid)["tasks"]
+            followup = agent.make_followup_plan(goal, initial)
+            storage.event(mid, "agent.followup_decision", followup)
+            if not followup["finish"]:
+                follow_states = {}
+                offset = len(initial)
+                for index, step in enumerate(followup["steps"]):
+                    tool = step["tool"]
+                    tid = storage.add_task(mid, AGENT_NAMES[tool], tool, offset + index)
+                    blockers = [dep for dep in step["depends_on"] if follow_states.get(dep) in ("error","blocked")]
+                    if blockers:
+                        storage.update_task(tid, "blocked", {"blocked_by":blockers,"reason":"Follow-up dependency failed"})
+                        follow_states[step["id"]] = "blocked"
+                        storage.event(mid, "task.blocked", {"step_id":step["id"],"task_id":tid,"dependencies":blockers,"round":2})
+                        continue
+                    storage.update_task(tid, "running")
+                    storage.event(mid, "tool.started", {"step_id":step["id"],"depends_on":step["depends_on"],
+                                    "tool":tool,"task_id":tid,"agent":AGENT_NAMES[tool],"round":2})
+                    try:
+                        result = tools.execute(tool)
+                        status = "passed" if result.get("pass") else "finding"
+                        storage.update_task(tid, status, result)
+                        follow_states[step["id"]] = status
+                        storage.event(mid, "tool.completed", {"step_id":step["id"],"tool":tool,"task_id":tid,
+                                                 "status":status,"result":result,"round":2})
+                    except Exception as exc:
+                        storage.update_task(tid, "error", {"error":str(exc)[:250]})
+                        follow_states[step["id"]] = "error"
+                        storage.event(mid, "tool.failed", {"step_id":step["id"],"tool":tool,
+                                               "task_id":tid,"error":str(exc)[:250],"round":2})
         details = storage.get(mid)
         findings = verification.verify(details["tasks"])
         storage.event(mid, "verification.completed", findings)
@@ -58,6 +92,12 @@ def run(mid, goal, mode):
                   "## Plan", f"**Reason:** {plan['reason']}", ""]
         for step in plan["steps"]:
             report.append(f"- `{step['id']}` → `{step['tool']}` (depends on: {', '.join(step['depends_on']) or 'none'})")
+        if followup is not None:
+            report += ["", "## Second-round Meta decision", f"**Decision:** {'finish' if followup['finish'] else 'execute more checks'}",
+                       f"**Reason:** {followup['reason']}",
+                       f"**Provider response ID:** {followup.get('provider_response_id', 'not applicable')}", ""]
+            for second in followup["steps"]:
+                report.append(f"- Follow-up `{second['id']}` → `{second['tool']}`")
         report += ["", "## Tool results"]
         for item in details["tasks"]:
             report += [f"### {item['name']} — {item['status']}", "```json", json.dumps(item["result"], indent=2, default=str), "```", ""]
