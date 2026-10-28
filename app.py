@@ -2,11 +2,11 @@
 from pathlib import Path
 import os
 import secrets
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, File, UploadFile
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from worldtrace import agent,engine,storage,tools,samples,delivery
+from worldtrace import agent,engine,storage,tools,samples,delivery,uploads
 
 app=FastAPI(title='WORLDTRACE',version='0.1.0',description='Verifiable local workflow prototype with optional actual Meta-model orchestration')
 STATIC=Path(__file__).parent/'static'
@@ -140,3 +140,30 @@ def download_deliverable(deliverable_id:str, x_worldtrace_token: str | None = He
     path=storage.root()/'deliverables'/deliverable_id/f'{deliverable_id}.zip'
     if not path.is_file():raise HTTPException(404,'Deliverable not found')
     return FileResponse(path,media_type='application/zip',filename=f'{deliverable_id}.zip')
+
+
+@app.post('/api/tools/{tool_id}/inspect-upload')
+async def inspect_uploaded_file(tool_id:str,
+    file:UploadFile=File(...),
+    comparison:UploadFile | None=File(default=None),
+    x_worldtrace_token: str | None=Header(default=None)):
+    """Authenticated in-memory inspection of user-provided data (no storage)."""
+    require_mission_token(x_worldtrace_token)
+    if tool_id not in uploads.FORMATS:
+        raise HTTPException(404,'Real-file inspection not available for this tool')
+    try:
+        raw=await file.read(uploads.MAX_BYTES+1)
+        compare_raw=None
+        if comparison is not None:
+            if tool_id!='etl_compare' or not (comparison.filename or '').lower().endswith('.csv'):
+                raise ValueError('Comparison is only available for ETL CSV target files')
+            compare_raw=await comparison.read(uploads.MAX_BYTES+1)
+        return uploads.inspect(tool_id,file.filename or '',raw,compare_raw)
+    except (ValueError,UnicodeError,KeyError,TypeError,IndexError,ImportError) as exc:
+        raise HTTPException(422,str(exc)[:220]) from exc
+    except Exception as exc:
+        # Malformed third-party PDF/JSON parser data must not crash the API or leak internals.
+        raise HTTPException(422,'Unable to parse uploaded file; verify its format and content') from exc
+    finally:
+        await file.close()
+        if comparison is not None:await comparison.close()
