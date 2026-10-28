@@ -20,7 +20,7 @@ def _event(events, role, action, details):
     events.append({"role": role, "action": action, "details": details,
                    "time": stamp, "prev_hash": previous, "hash": digest})
 
-def run(goal, files):
+def run(goal, files, model_plan=None):
     if not isinstance(goal, str) or not 12 <= len(goal.strip()) <= 1500:
         raise ValueError("Instruction must be 12-1500 characters")
     if not 1 <= len(files) <= len(FIELDS) or set(files) - set(FIELDS):
@@ -32,13 +32,23 @@ def run(goal, files):
     for role, (filename, data) in files.items():
         if not filename.lower().endswith(FIELDS[role][1]) or not 1 <= len(data) <= uploads.MAX_BYTES:
             raise ValueError("Invalid or oversized file for role " + role)
+    if model_plan is not None:
+        ordered=model_plan.get('ordered_roles')
+        if not isinstance(ordered,list) or sorted(ordered)!=sorted(files):
+            raise ValueError('Model plan must cover exactly the selected files')
+    else:
+        ordered=sorted(files)
     events = []
+    if model_plan is not None:
+        _event(events, 'Mission Commander', 'meta_model_file_plan',
+               {'ordered_roles':ordered,'reason':model_plan.get('reason',''),
+                'model':model_plan.get('model',''),'provider_response_id':model_plan.get('provider_response_id','')})
     _event(events, "Research Agent", "inventory_user_evidence",
            {"roles": sorted(files), "source": "user supplied"})
     _event(events, "Security Agent", "enforce_bounded_parsers",
-           {"external_calls": 0, "external_writes": 0, "model_calls": 0})
+           {"external_calls": 1 if model_plan else 0, "external_writes": 0, "model_calls": 1 if model_plan else 0})
     observations = []
-    for role in sorted(files):
+    for role in ordered:
         if role == "target_csv":
             continue
         filename, data = files[role]
@@ -68,7 +78,7 @@ def run(goal, files):
            {"proposals": len(actions), "executed": 0})
     report_lines = ["# WORLDTRACE Multi-File Evidence Report", "",
                     "Instruction: " + goal.strip(), "Verdict: " + verdict,
-                    "Mode: deterministic; NOT Meta model inference", "",
+                    ("Mode: REAL model-planned file order, deterministic inspection" if model_plan else "Mode: deterministic; NOT Meta model inference"), "",
                     "## Uploaded evidence"]
     for item in observations:
         report_lines += ["", "### " + item["file_name"],
@@ -78,14 +88,16 @@ def run(goal, files):
     report_lines += ["", "## Cross-file consistency", json.dumps(checks, indent=2),
                      "", "## Human review recommendations", json.dumps(actions, indent=2),
                      "", "## Limits",
-                     "No real-world remediation, production access, external writes or model inference."]
+                     "No real-world remediation, production access or external writes.",
+                     "Planning was model-driven; parsers and verification are deterministic." if model_plan else "No Meta inference."]
     report = "\n".join(report_lines) + "\n"
     digest = hashlib.sha256(report.encode()).hexdigest()
     _event(events, "Delivery Agent", "produce_verified_markdown",
            {"report_sha256": digest, "bytes": len(report.encode())})
-    return {"mode": "deterministic_multi_file", "status": verdict,
+    return {"mode": "meta_planned_multi_file" if model_plan else "deterministic_multi_file",
+            "model_plan": model_plan, "status": verdict,
             "goal": goal.strip(), "observations": observations,
             "cross_checks": checks, "proposed_actions": actions, "trace": events,
             "report_markdown": report, "report_sha256": digest,
             "privacy": "Uploaded inputs processed in memory; no mission-history storage",
-            "limitations": "No Meta reasoning, autonomous repairs or production integrations"}
+            "limitations": "No autonomous repairs or production integrations; deterministic tools and verification" if model_plan else "No Meta reasoning, autonomous repairs or production integrations"}
