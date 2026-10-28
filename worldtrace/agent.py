@@ -129,3 +129,45 @@ def probe_provider():
         raise ModelUnavailable("Provider rejected inference request (HTTP "+str(status)+"). Check credits, key and model access.") from exc
     except (httpx.HTTPError,KeyError,ValueError,TypeError) as exc:
         raise ModelUnavailable("Model inference probe failed; connection not verified: "+type(exc).__name__) from exc
+
+def make_uploaded_file_plan(goal, roles):
+    """REAL model planning over role names only; never upload raw files or excerpts."""
+    if not configured():
+        raise ModelUnavailable("Meta-compatible inference is not configured")
+    roles=list(roles)
+    if not roles or len(set(roles))!=len(roles):
+        raise ModelUnavailable("Invalid file-role inventory")
+    base=os.environ["WORLDTRACE_MODEL_BASE_URL"].rstrip("/")
+    if not base.startswith("https://"):raise ModelUnavailable("HTTPS inference endpoint required")
+    name=os.getenv("WORLDTRACE_MODEL_NAME","meta-models/muse-spark-open-1026")
+    system=("You are WORLDTRACE Mission Commander. Output ONLY valid JSON: "
+            '{"ordered_roles":["role1","role2"],"reason":"short rationale"}. '
+            "The list MUST include EACH supplied role EXACTLY ONCE. "
+            "You may reorder but may not add, drop, duplicate, rename or invent roles. "
+            "There are no external write permissions. Only validated local parsers execute. "
+            "Do not claim actual resolution, successful execution or independent verification.")
+    payload={"model":name,"messages":[{"role":"system","content":system},
+       {"role":"user","content":json.dumps({"goal":goal,"available_file_roles":roles})}],
+       "max_tokens":400,"temperature":0}
+    try:
+        with httpx.Client(timeout=35) as client:
+            response=client.post(base+"/chat/completions",json=payload,
+                headers={"Authorization":"Bearer "+os.environ["WORLDTRACE_MODEL_API_KEY"]})
+            response.raise_for_status()
+            data=response.json()
+        parsed=_decode(data["choices"][0]["message"]["content"])
+        ordered=parsed.get("ordered_roles")
+        reason=parsed.get("reason")
+        if not isinstance(ordered,list) or any(not isinstance(r,str) for r in ordered) or sorted(ordered)!=sorted(roles):
+            raise ValueError("Model plan did not cover the exact input roles")
+        if not isinstance(reason,str) or not reason.strip():
+            raise ValueError("Model plan missing a rationale")
+        return {"ordered_roles":ordered,"reason":reason[:450],
+                "requested_model":name,"model":data.get("model",name),
+                "provider_response_id":data.get("id",""),
+                "provider":os.getenv("WORLDTRACE_MODEL_PROVIDER","configured endpoint")}
+    except httpx.HTTPStatusError as exc:
+        raise ModelUnavailable("Meta model planning provider rejected request (HTTP "+
+             str(exc.response.status_code)+"). Check activated credits and model access.") from exc
+    except (httpx.HTTPError,KeyError,ValueError,TypeError,AttributeError) as exc:
+        raise ModelUnavailable("Meta model file planning unavailable: "+type(exc).__name__) from exc
