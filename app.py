@@ -2,11 +2,11 @@
 from pathlib import Path
 import os
 import secrets
-from fastapi import FastAPI, HTTPException, Header, File, UploadFile
+from fastapi import FastAPI, HTTPException, Header, File, UploadFile, Form
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from worldtrace import agent,engine,storage,tools,samples,delivery,uploads
+from worldtrace import agent,engine,storage,tools,samples,delivery,uploads,multifile
 
 app=FastAPI(title='WORLDTRACE',version='0.1.0',description='Verifiable local workflow prototype with optional actual Meta-model orchestration')
 STATIC=Path(__file__).parent/'static'
@@ -167,3 +167,37 @@ async def inspect_uploaded_file(tool_id:str,
     finally:
         await file.close()
         if comparison is not None:await comparison.close()
+
+@app.post('/api/multi-file-missions/run')
+async def run_uploaded_multi_file_mission(
+    goal: str = Form(...),
+    pdf: UploadFile | None = File(default=None),
+    email: UploadFile | None = File(default=None),
+    har: UploadFile | None = File(default=None),
+    source_csv: UploadFile | None = File(default=None),
+    target_csv: UploadFile | None = File(default=None),
+    api_json: UploadFile | None = File(default=None),
+    messages_json: UploadFile | None = File(default=None),
+    legacy_txt: UploadFile | None = File(default=None),
+    x_worldtrace_token: str | None = Header(default=None),
+):
+    """One private instruction, coordinated real-file checks and report. No files stored."""
+    require_mission_token(x_worldtrace_token)
+    fields = {"pdf": pdf, "email": email, "har": har, "source_csv": source_csv,
+              "target_csv": target_csv, "api_json": api_json,
+              "messages_json": messages_json, "legacy_txt": legacy_txt}
+    selected = {}
+    try:
+        for role, upload in fields.items():
+            if upload is not None:
+                selected[role] = (upload.filename or "", await upload.read(uploads.MAX_BYTES + 1))
+        try:
+            return multifile.run(goal, selected)
+        except (ValueError, UnicodeError, KeyError, TypeError) as exc:
+            raise HTTPException(422, str(exc)[:220]) from exc
+        except Exception as exc:
+            raise HTTPException(422, "Unable to process one of the uploaded files") from exc
+    finally:
+        for upload in fields.values():
+            if upload is not None:
+                await upload.close()
