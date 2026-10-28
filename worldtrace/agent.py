@@ -59,3 +59,41 @@ def make_plan(goal, use_model):
                 "provider_response_id": response_data.get("id", ""), **plan}
     except (httpx.HTTPError, KeyError, ValueError, TypeError, InvalidPlan) as exc:
         raise ModelUnavailable("Model planning failed: " + str(exc)[:300]) from exc
+
+
+def make_followup_plan(goal, tasks):
+    """A SECOND REAL MODEL CALL after observing actual fixture-tool results.
+
+    The model may finish, or request at most three previously unexecuted tools.
+    Unsafe or malformed output fails explicitly; no silent local fallback.
+    """
+    if not configured():
+        raise ModelUnavailable("Meta model unavailable for follow-up reasoning")
+    executed = [task["tool"] for task in tasks]
+    remaining = followup_candidates(executed)
+    if not remaining:
+        return {"finish": True, "reason": "All approved tools already executed", "steps": [], "tasks": [], "mode": "policy-stop"}
+    base = os.environ["WORLDTRACE_MODEL_BASE_URL"].rstrip("/")
+    if not base.startswith("https://"):
+        raise ModelUnavailable("HTTPS inference endpoint required")
+    name = os.getenv("WORLDTRACE_MODEL_NAME", "meta-models/muse-spark-open-1026")
+    evidence = [{"tool":t["tool"], "status":t["status"], "result":t.get("result",{})} for t in tasks]
+    system = ("You are WORLDTRACE follow-up planner. Review real SYNTHETIC fixture observations. "
+              "Return ONLY JSON: either {\\\"finish\\\":true,\\\"reason\\\":\\\"...\\\"} or "
+              "{\\\"finish\\\":false,\\\"reason\\\":\\\"...\\\",\\\"steps\\\":[{\\\"id\\\":\\\"...\\\",\\\"tool\\\":\\\"...\\\",\\\"depends_on\\\":[],\\\"objective\\\":\\\"...\\\"}]}. "
+              "Choose 1-3 previously UNUSED tools from the provided allowlist only if they add valuable evidence. "
+              "Never claim external actions or fixes. Only inspect local synthetic fixtures. No arbitrary code.")
+    payload = {"model": name, "messages":[{"role":"system","content":system},
+               {"role":"user","content":json.dumps({"goal":goal,"observations":evidence,"remaining_tools":remaining})}],
+               "temperature":0.1,"max_tokens":850}
+    try:
+        with httpx.Client(timeout=45) as client:
+            response=client.post(base+"/chat/completions",json=payload,
+                 headers={"Authorization":"Bearer "+os.environ["WORLDTRACE_MODEL_API_KEY"]})
+            response.raise_for_status()
+            data=response.json()
+        plan=validate_followup(_decode(data["choices"][0]["message"]["content"]),executed)
+        return {"mode":"meta-model-followup","model":data.get("model",name),
+                "provider_response_id":data.get("id",""), **plan}
+    except (httpx.HTTPError, KeyError, ValueError, TypeError, InvalidPlan) as exc:
+        raise ModelUnavailable("Adaptive model follow-up failed: "+str(exc)[:300]) from exc
