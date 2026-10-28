@@ -271,3 +271,20 @@ async function loadUnifiedReviewQueue(providedToken,selectedId){
  }catch(e){if(/403|authorization|token/i.test(e.message))app.missionToken=null;out.textContent='Could not load reviews: '+e.message}
 }
 $('loadUnifiedReviews').onclick=()=>loadUnifiedReviewQueue();
+
+$('probeModel').onclick=async()=>{
+ const token=privateToken();if(!token)return;
+ const btn=$('probeModel'),out=$('probeModelResult');
+ btn.disabled=true;out.textContent='Sending one short real inference request…';
+ try{
+  const response=await fetch('/api/model/probe',{method:'POST',headers:{'X-WORLDTRACE-TOKEN':token}});
+  const data=await response.json().catch(()=>({detail:'Invalid provider response'}));
+  if(!response.ok)throw Error(data.detail||'HTTP '+response.status);
+  out.textContent='REAL INFERENCE VERIFIED · '+String(data.returned_model||data.requested_model)+
+   ' · Mission planning still unverified.';
+  $('metricModel').innerHTML='LIVE<span class="metric-unit">API</span>';
+ }catch(e){
+  if(/403|authorization|token/i.test(e.message))app.missionToken=null;
+  out.textContent='NOT VERIFIED · '+e.message;
+ }finally{btn.disabled=false}
+};
