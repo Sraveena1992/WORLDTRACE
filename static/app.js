@@ -155,7 +155,7 @@ $('multiRun').onclick=async()=>{
  const token=privateToken();if(!token)return;
  const btn=$('multiRun');btn.disabled=true;btn.textContent='Executing actual file checks…';
  try{
-   const body=new FormData();body.append('goal',goal);
+   const body=new FormData();body.append('goal',goal);body.append('retain_result',$('multiRetain').checked?'true':'false');
    for(const [role,id] of selected)body.append(role,$(id).files[0]);
    const res=await fetch('/api/multi-file-missions/run',{
     method:'POST',headers:{'X-WORLDTRACE-TOKEN':token},body});
@@ -165,9 +165,10 @@ $('multiRun').onclick=async()=>{
    const intro='<div class="human-result"><div class="human-result-head"><strong>Mission outcome</strong><span class="run-status '+(data.status==='LOCAL_CHECKS_PASSED'?'passed':'finding')+'">'+safe(data.status.replaceAll('_',' '))+'</span></div><p>'+data.observations.length+' actual file analyses complete · '+findings.length+' require review · '+data.cross_checks.length+' cross-file consistency checks.</p><div class="human-result-note">Deterministic parser execution. No Meta inference, no external changes, no sensitive file retention in mission history.</div></div>';
    const records=data.observations.map(o=>'<div class="outcome-stage"><span class="run-status '+safe(o.status)+'">'+safe(o.status.toUpperCase())+'</span><div><b>'+safe(o.file_name)+'</b><p>'+safe(o.tool)+' · SHA256 '+safe(o.sha256.slice(0,16))+'…</p></div></div>').join('');
    const correlations=data.cross_checks.map(c=>'<div class="outcome-stage"><strong>'+safe(c.matched?'MATCH':'MISMATCH')+'</strong><div><b>'+safe(c.name)+'</b><p>'+safe(c.basis)+'</p></div></div>').join('');
-   const mission={id:'SESSION-'+String(Date.now()),goal,created:new Date().toISOString(),data};
+   const mission={id:data.saved_mission_id||'SESSION-'+String(Date.now()),goal,created:new Date().toISOString(),data};
    app.unifiedMissions.unshift(mission);app.unifiedMissions=app.unifiedMissions.slice(0,5);app.selectedUnified=mission.id;
    renderAgentWorkforce();
+   if(data.saved_mission_id)await loadUnifiedHistory(token);
    $('multiResults').innerHTML=intro+'<div class="eyebrow">INDIVIDUAL FILE RESULTS</div>'+records+'<div class="eyebrow multi-spaced">CROSS-FILE CHECKS</div>'+(correlations||'<p class="muted">No matching cross-file check for selected types.</p>')+'<div class="eyebrow multi-spaced">EXECUTION TRACE</div>'+data.trace.map(e=>'<div class="outcome-stage"><span class="step-number">'+safe(e.role.split(' ')[0])+'</span><div><b>'+safe(e.role)+'</b><p>'+safe(e.action.replaceAll('_',' '))+'</p></div></div>').join('')+'<div class="multi-actions"><button type="button" class="run-btn secondary-run" id="downloadMulti">↓ Download verified Markdown report</button><button type="button" class="tiny-btn" id="inspectMissionAgents">◉ Inspect Agent Workforce →</button></div>';
    $('inspectMissionAgents').onclick=()=>route('agents');
    $('downloadMulti').onclick=()=>{
@@ -208,3 +209,65 @@ function renderAgentWorkforce(){
  }).join('');
 }
 $('agentMissionSelect').onchange=e=>{app.selectedUnified=e.target.value;renderAgentWorkforce()};
+
+async function loadUnifiedHistory(providedToken){
+ const err=$('multiError');
+ const token=providedToken||privateToken();if(!token)return;
+ try{
+   const items=await api('/api/unified-missions',{headers:{'X-WORLDTRACE-TOKEN':token}});
+   $('unifiedHistory').innerHTML=items.length?
+      items.map(m=>'<button type="button" class="workspace-run-record" data-unified-id="'+safe(m.id)+'"><span><strong>'+safe(m.id)+'</strong><small>'+safe(m.goal.slice(0,95))+'</small></span><span>'+safe(m.status.replaceAll('_',' '))+'</span></button>').join(''):
+      '<div class="review-empty">No saved unified missions yet. Select the save checkbox before execution.</div>';
+   $('unifiedHistory').querySelectorAll('[data-unified-id]').forEach(btn=>btn.onclick=()=>openUnifiedMission(btn.dataset.unifiedId,token));
+ }catch(e){if(/403|authorization|token/i.test(e.message))app.missionToken=null;err.hidden=false;err.textContent='Could not load saved missions: '+e.message}
+}
+async function openUnifiedMission(id,token){
+ const err=$('multiError');err.hidden=true;
+ try{
+   const data=await api('/api/unified-missions/'+encodeURIComponent(id),{headers:{'X-WORLDTRACE-TOKEN':token}});
+   const existing=app.unifiedMissions.find(m=>m.id===id);
+   if(!existing)app.unifiedMissions.unshift({id,goal:data.goal,created:data.created,data});
+   else existing.data=data;
+   app.selectedUnified=id;
+   renderAgentWorkforce();
+   const names=data.observations.map(o=>'<div class="outcome-stage"><span class="run-status '+safe(o.status)+'">'+safe(o.status.toUpperCase())+'</span><div><b>'+safe(o.file_name)+'</b><p>'+safe(o.tool)+'</p></div></div>').join('');
+   $('multiResults').innerHTML='<div class="human-result"><strong>Saved mission '+safe(id)+'</strong><p>'+safe(data.goal)+'</p><p>'+safe(data.status.replaceAll('_',' '))+' · '+data.observations.length+' processed roles · '+data.proposed_actions.length+' follow-up proposals</p></div>'+names+
+    '<div class="multi-actions"><button class="run-btn secondary-run" id="downloadSavedUnified">↓ Download saved report</button><button class="tiny-btn" id="viewSavedAgents">◉ View agent responsibilities</button><button class="tiny-btn" id="reviewSavedActions">✓ Review actions</button></div>';
+   $('downloadSavedUnified').onclick=()=>downloadMarkdown(data.report_markdown,id+'.md');
+   $('viewSavedAgents').onclick=()=>route('agents');
+   $('reviewSavedActions').onclick=()=>{route('reviews');loadUnifiedReviewQueue(token,id)};
+   route('multi');
+ }catch(e){if(/403|authorization|token/i.test(e.message))app.missionToken=null;err.hidden=false;err.textContent='Could not open saved mission: '+e.message}
+}
+function downloadMarkdown(report,filename){
+ const url=URL.createObjectURL(new Blob([report],{type:'text/markdown;charset=utf-8'}));
+ const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);
+}
+$('loadUnifiedHistory').onclick=()=>loadUnifiedHistory();
+async function loadUnifiedReviewQueue(providedToken,selectedId){
+ const token=providedToken||privateToken();if(!token)return;
+ const out=$('unifiedReviewQueue');
+ try{
+  const rows=await api('/api/unified-missions',{headers:{'X-WORLDTRACE-TOKEN':token}});
+  const records=await Promise.all(rows.slice(0,20).map(r=>api('/api/unified-missions/'+encodeURIComponent(r.id),{headers:{'X-WORLDTRACE-TOKEN':token}})));
+  const selected=selectedId?records.filter(r=>r.id===selectedId):records;
+  out.innerHTML=selected.map(r=>{
+   const decided=new Set((r.decisions||[]).map(d=>d.action_index));
+   return '<div class="unified-review-record"><strong>'+safe(r.id)+' · '+safe(r.goal.slice(0,85))+'</strong>'+
+    (r.proposed_actions.length?r.proposed_actions.map((a,i)=>'<div class="unified-review-action"><p>'+safe(a.file||'Input')+': '+safe(a.next_action)+'</p>'+
+      (decided.has(i)?'<small>Already reviewed — no external execution</small>':'<button class="tiny-btn" data-unified-review="'+safe(r.id)+'" data-action-index="'+i+'" data-decision="approve_manual_followup">Approve manual follow-up</button> <button class="tiny-btn" data-unified-review="'+safe(r.id)+'" data-action-index="'+i+'" data-decision="reject">Reject</button>')+'</div>').join(''):'<p>No follow-up actions proposed.</p>')+'</div>';
+  }).join('')||'<p>No saved missions found.</p>';
+  out.querySelectorAll('[data-unified-review]').forEach(btn=>btn.onclick=async()=>{
+    const reviewer=window.prompt('Reviewer name for audit record:');
+    if(!reviewer||reviewer.trim().length<2)return;
+    const note=window.prompt('Optional review note (no confidential data):')||'';
+    try{
+     await api('/api/unified-missions/'+encodeURIComponent(btn.dataset.unifiedReview)+'/decisions',
+       {method:'POST',headers:{'Content-Type':'application/json','X-WORLDTRACE-TOKEN':token},
+        body:JSON.stringify({action_index:Number(btn.dataset.actionIndex),decision:btn.dataset.decision,reviewer:reviewer.trim(),note:note.slice(0,500)})});
+     await loadUnifiedReviewQueue(token,selectedId);
+    }catch(e){out.insertAdjacentHTML('afterbegin','<p class="error">Review failed: '+safe(e.message)+'</p>')}
+  });
+ }catch(e){if(/403|authorization|token/i.test(e.message))app.missionToken=null;out.textContent='Could not load reviews: '+e.message}
+}
+$('loadUnifiedReviews').onclick=()=>loadUnifiedReviewQueue();
