@@ -20,7 +20,7 @@ async function showMission(id){app.active=id;try{const d=await api(`/api/mission
 if(d.status==='completed'||d.status==='error'){clearInterval(app.timer);app.timer=null;const button=$('run');button.disabled=false;button.innerHTML='<span>✳</span> Execute mission <span>→</span>';await refresh()}
 return d}catch(e){$('error').hidden=false;$('error').textContent=e.message}}
 $('run').onclick=async()=>{$('error').hidden=true;const goal=$('goal').value.trim();if(goal.length<12){$('error').hidden=false;$('error').textContent='Please provide a mission with at least 12 characters.';return}const button=$('run');button.disabled=true;button.textContent='Starting mission…';try{let headers={'Content-Type':'application/json'};if(app.mode==='model'){const token=privateToken();if(!token)throw Error('Model mission cancelled: a private WORLDTRACE mission token is required.');headers['X-WORLDTRACE-TOKEN']=token}const d=await api('/api/missions',{method:'POST',headers,body:JSON.stringify({goal,mode:app.mode})});button.textContent='Mission in progress…';await refresh();await showMission(d.id);if(app.timer)clearInterval(app.timer);if(!['completed','error'].includes((await api('/api/missions/'+encodeURIComponent(d.id))).status))app.timer=setInterval(()=>showMission(d.id),950)}catch(e){if(app.mode==='model'&&/authorization|403|token/i.test(e.message))app.missionToken=null;button.disabled=false;button.innerHTML='<span>✳</span> Execute mission <span>→</span>';$('error').hidden=false;$('error').textContent=e.message}}
-async function launchTool(tool){app.workspaceTool=tool;app.workspaceSource=document.getElementById('agents').classList.contains('shown')?'agents':'tools';route('workspace');$('workspaceResult').innerHTML='<div class="module-result-placeholder">Run this fixture tool to generate a recorded finding.</div>';$('workspaceError').hidden=true;const run=$('runOneTool');run.disabled=false;run.textContent='▶ Run this tool on its approved fixture →';try{const info=await api('/api/tools/'+encodeURIComponent(tool)+'/workspace');$('workspaceTitle').textContent=info.title;$('workspaceRole').textContent=info.role;$('workspacePurpose').textContent=info.purpose;$('workspaceFixture').textContent=info.fixture;$('workspaceSteps').innerHTML=info.steps.map((step,i)=>'<li><span class="step-number">'+String(i+1).padStart(2,'0')+'</span><span>'+safe(step)+'</span></li>').join('');$('workspaceLimitation').textContent='SCOPE BOUNDARY: '+info.limitation;await loadToolHistory()}catch(e){$('workspaceError').hidden=false;$('workspaceError').textContent='Workspace unavailable: '+e.message}}
+async function launchTool(tool){app.workspaceTool=tool;app.workspaceSource=document.getElementById('agents').classList.contains('shown')?'agents':'tools';route('workspace');$('workspaceResult').innerHTML='<div class="module-result-placeholder">Run this fixture tool to generate a recorded finding.</div>';$('workspaceError').hidden=true;const run=$('runOneTool');run.disabled=false;run.textContent='▶ Run this tool on its approved fixture →';try{const info=await api('/api/tools/'+encodeURIComponent(tool)+'/workspace');configureUpload(tool);$('workspaceTitle').textContent=info.title;$('workspaceRole').textContent=info.role;$('workspacePurpose').textContent=info.purpose;$('workspaceFixture').textContent=info.fixture;$('workspaceSteps').innerHTML=info.steps.map((step,i)=>'<li><span class="step-number">'+String(i+1).padStart(2,'0')+'</span><span>'+safe(step)+'</span></li>').join('');$('workspaceLimitation').textContent='SCOPE BOUNDARY: '+info.limitation;await loadToolHistory()}catch(e){$('workspaceError').hidden=false;$('workspaceError').textContent='Workspace unavailable: '+e.message}}
 async function loadToolHistory(){if(!app.workspaceTool)return;try{const runs=await api('/api/tools/'+encodeURIComponent(app.workspaceTool)+'/runs');$('workspaceHistory').innerHTML=runs.length?runs.map(run=>'<button type="button" class="workspace-run-record" data-run-id="'+safe(run.id)+'"><span><strong>'+safe(run.id)+'</strong><small>'+safe(run.completed)+'</small></span><span class="run-status '+safe(run.status)+'">'+safe(run.status.toUpperCase())+'</span></button>').join(''):'<div class="review-empty">No previous runs for this module.</div>';$('workspaceHistory').querySelectorAll('[data-run-id]').forEach(button=>button.onclick=()=>loadRecordedRun(button.dataset.runId))}catch(e){$('workspaceHistory').textContent='History unavailable: '+e.message}}
 function displayRecordedRun(run){const result=run.result||{};const badges=Object.entries(result).filter(([key,value])=>['pass','file','pages','rows','pending','failure_count','missing_ids','duplicates','records','p95_ms','expected','simulated'].includes(key)).map(([key,value])=>'<div class="result-fact"><span>'+safe(key.replaceAll('_',' '))+'</span><b>'+safe(Array.isArray(value)?value.join(', ')||'none':value)+'</b></div>').join('');$('workspaceResult').innerHTML='<div class="result-heading"><span class="run-status '+safe(run.status)+'">'+safe(run.status.toUpperCase())+'</span><strong>'+safe(run.id)+'</strong></div><div class="result-facts">'+badges+'</div><div class="eyebrow">RECORDED BACKEND EVIDENCE</div><pre class="result-json">'+safe(JSON.stringify(result,null,2))+'</pre><div class="result-footer">Source: synthetic local fixture · '+safe(run.completed)+' · No external writes or production access</div>'}
 async function loadRecordedRun(runId){try{const run=await api('/api/tool-runs/'+encodeURIComponent(runId));if(run.tool!==app.workspaceTool)throw Error('Run does not belong to selected tool');displayRecordedRun(run)}catch(e){$('workspaceError').hidden=false;$('workspaceError').textContent=e.message}}
@@ -58,4 +58,45 @@ $('buildDeliverable').onclick=async()=>{
   $('downloadOutcome').onclick=async()=>{try{await downloadPrivatePackage(data.download_url,data.id,token)}catch(e){error.hidden=false;error.textContent=e.message}};
  }catch(e){if(/authorization|403|token/i.test(e.message))app.missionToken=null;error.hidden=false;error.textContent=e.message}
  finally{button.disabled=false;button.textContent='✦ Produce verified delivery package →'}
+};
+
+const UPLOAD_TYPES={
+ pdf_inspect:'.pdf',email_inspect:'.eml',network_inspect:'.har',
+ etl_compare:'.csv',api_virtualize:'.json',middleware_test:'.json',mainframe_contract:'.txt'
+};
+function configureUpload(tool){
+ const supported=Object.hasOwn(UPLOAD_TYPES,tool);
+ $('uploadPanel').hidden=!supported;
+ $('uploadMain').value='';$('uploadComparison').value='';
+ $('uploadError').hidden=true;
+ if(!supported)return;
+ $('uploadMain').accept=UPLOAD_TYPES[tool];
+ $('uploadComparisonBox').hidden=tool!=='etl_compare';
+}
+function displayUploadedResult(data){
+ const result=data.result||{};
+ $('workspaceResult').innerHTML='<div class="result-heading"><span class="run-status '+safe(data.status)+'">'+safe(data.status.toUpperCase())+'</span><strong>USER FILE ANALYSIS</strong></div>'+
+ '<div class="result-facts"><div class="result-fact"><span>FILE</span><b>'+safe(data.file_name)+'</b></div><div class="result-fact"><span>SHA-256</span><b>'+safe(data.sha256)+'</b></div></div>'+
+ '<div class="eyebrow">REAL FILE PARSER OUTPUT (NOT AI)</div><pre class="result-json">'+safe(JSON.stringify(result,null,2))+'</pre>'+
+ '<div class="result-footer">This result came from the selected file. The upload is analyzed in memory, is not stored as a tool run, and is not externally verified.</div>';
+}
+$('analyzeUpload').onclick=async()=>{
+ const tool=app.workspaceTool;
+ if(!Object.hasOwn(UPLOAD_TYPES,tool))return;
+ const error=$('uploadError');error.hidden=true;
+ const file=$('uploadMain').files?.[0];
+ const target=$('uploadComparison').files?.[0];
+ if(!file || (tool==='etl_compare'&&!target)){error.hidden=false;error.textContent=tool==='etl_compare'?'Select both source and target CSV files.':'Select a file to analyze.';return;}
+ if(file.size>2097152 || (target&&target.size>2097152)){error.hidden=false;error.textContent='Each uploaded file must be at most 2 MiB.';return;}
+ const token=privateToken();if(!token)return;
+ const button=$('analyzeUpload');button.disabled=true;button.textContent='Analyzing actual file…';
+ try{
+   const form=new FormData();form.append('file',file);
+   if(target)form.append('comparison',target);
+   const response=await fetch('/api/tools/'+encodeURIComponent(tool)+'/inspect-upload',{method:'POST',headers:{'X-WORLDTRACE-TOKEN':token},body:form});
+   const data=await response.json().catch(()=>({detail:'Invalid server response'}));
+   if(!response.ok)throw Error(data.detail||('HTTP '+response.status));
+   if(app.workspaceTool===tool)displayUploadedResult(data);
+ }catch(e){if(/403|authorization|token/i.test(e.message))app.missionToken=null;error.hidden=false;error.textContent='Upload analysis failed: '+e.message}
+ finally{button.disabled=false;button.textContent='Analyze uploaded file →'}
 };
