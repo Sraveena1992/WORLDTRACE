@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException, Header, File, UploadFile, Form
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from worldtrace import agent,engine,storage,tools,samples,delivery,uploads,multifile
+from worldtrace import agent,engine,storage,tools,samples,delivery,uploads,multifile,unified_records
 
 app=FastAPI(title='WORLDTRACE',version='0.1.0',description='Verifiable local workflow prototype with optional actual Meta-model orchestration')
 STATIC=Path(__file__).parent/'static'
@@ -20,6 +20,12 @@ class DeliverableIn(BaseModel):
     goal: str=Field(min_length=12,max_length=1500)
     evidence: str=Field(default='',max_length=12000)
     domain: str='supplier_onboarding'
+
+class UnifiedDecisionIn(BaseModel):
+    action_index: int = Field(ge=0)
+    decision: str
+    reviewer: str = Field(min_length=2,max_length=80)
+    note: str = Field(default='',max_length=500)
 
 class RecoveryReviewIn(BaseModel):
     tool: str=Field(min_length=2,max_length=64)
@@ -171,6 +177,7 @@ async def inspect_uploaded_file(tool_id:str,
 @app.post('/api/multi-file-missions/run')
 async def run_uploaded_multi_file_mission(
     goal: str = Form(...),
+    retain_result: bool = Form(default=False),
     pdf: UploadFile | None = File(default=None),
     email: UploadFile | None = File(default=None),
     har: UploadFile | None = File(default=None),
@@ -192,7 +199,12 @@ async def run_uploaded_multi_file_mission(
             if upload is not None:
                 selected[role] = (upload.filename or "", await upload.read(uploads.MAX_BYTES + 1))
         try:
-            return multifile.run(goal, selected)
+            result=multifile.run(goal, selected)
+            if retain_result:
+                record=unified_records.record(result)
+                result['saved_mission_id']=record['id']
+                result['retention']='Derived findings and report saved in SQLite (no raw files); may be lost on free Render restart'
+            return result
         except (ValueError, UnicodeError, KeyError, TypeError) as exc:
             raise HTTPException(422, str(exc)[:220]) from exc
         except Exception as exc:
@@ -201,3 +213,22 @@ async def run_uploaded_multi_file_mission(
         for upload in fields.values():
             if upload is not None:
                 await upload.close()
+
+@app.get('/api/unified-missions')
+def unified_listing(x_worldtrace_token: str | None = Header(default=None)):
+    require_mission_token(x_worldtrace_token)
+    return unified_records.listing()
+
+@app.get('/api/unified-missions/{mission_id}')
+def unified_detail(mission_id:str,x_worldtrace_token: str | None = Header(default=None)):
+    require_mission_token(x_worldtrace_token)
+    try:return unified_records.get(mission_id)
+    except ValueError as exc:raise HTTPException(404,str(exc)) from exc
+
+@app.post('/api/unified-missions/{mission_id}/decisions',status_code=201)
+def unified_decision(mission_id:str,req:UnifiedDecisionIn,
+                     x_worldtrace_token: str | None = Header(default=None)):
+    require_mission_token(x_worldtrace_token)
+    try:return unified_records.decide(mission_id,req.action_index,req.decision,req.reviewer,req.note)
+    except ValueError as exc:
+        raise HTTPException(404 if 'not found' in str(exc) else 409,str(exc)) from exc
