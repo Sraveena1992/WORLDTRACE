@@ -152,3 +152,14 @@ button:focus-visible,a:focus-visible,select:focus-visible{outline:2px solid #74e
 .human-check{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#101f30;border:1px solid #2e4657;border-radius:8px;padding:11px 13px;font-size:12px;color:#bcd4e3}
 .human-check strong{color:#dcecf6;font-size:11px;white-space:nowrap}
 .result-label{font-size:10px;font-weight:800;letter-spacing:.1em;color:#81b9c6}
+
+/* v11 one-command multiple user file evidence */
+.multi-file-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0 26px}
+.multi-file-fields label{font-size:11px;color:#b2d2df;background:#101f30;border:1px solid #2d5265;padding:14px;border-radius:9px;display:flex;flex-direction:column;gap:9px}
+.multi-file-fields input{color:#d7f2f7;font-size:10px;max-width:100%}
+.multi-file-fields input::file-selector-button{background:#1b4453;border:1px solid #498895;border-radius:5px;color:#d4f9f3;padding:6px;cursor:pointer}
+.multi-spaced{margin-top:24px}
+#multiResults .outcome-stage{margin:11px 0}
+#multiResults .outcome-stage b{overflow-wrap:anywhere}
+#downloadMulti{margin-top:24px}
+@media(max-width:720px){.multi-file-fields{grid-template-columns:1fr}}
