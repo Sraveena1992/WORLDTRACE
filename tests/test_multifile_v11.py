@@ -61,7 +61,8 @@ def test_frontend_multi_file_controls_exist():
     base=Path(__file__).resolve().parents[1]/"static"
     html=(base/"index.html").read_text(encoding="utf8")
     js=(base/"app.js").read_text(encoding="utf8")
-    assert 'data-route="multi"' in html
+    assert 'id="openUnifiedMission"' in html
+    assert 'id="multi" class="page"' in html
     assert 'id="multi" class="page"' in html
     assert 'id="multiRun"' in html
     assert "fetch('/api/multi-file-missions/run'" in js
