@@ -155,21 +155,22 @@ $('multiRun').onclick=async()=>{
  const token=privateToken();if(!token)return;
  const btn=$('multiRun');btn.disabled=true;btn.textContent='Executing actual file checks…';
  try{
-   const body=new FormData();body.append('goal',goal);body.append('retain_result',$('multiRetain').checked?'true':'false');
+   const body=new FormData();body.append('goal',goal);body.append('retain_result',$('multiRetain').checked?'true':'false');body.append('model_planning',$('multiModel').checked?'true':'false');
    for(const [role,id] of selected)body.append(role,$(id).files[0]);
    const res=await fetch('/api/multi-file-missions/run',{
     method:'POST',headers:{'X-WORLDTRACE-TOKEN':token},body});
    const data=await res.json().catch(()=>({detail:'Invalid server response'}));
    if(!res.ok)throw Error(data.detail||'HTTP '+res.status);
    const findings=data.observations.filter(o=>o.status!=='passed');
-   const intro='<div class="human-result"><div class="human-result-head"><strong>Mission outcome</strong><span class="run-status '+(data.status==='LOCAL_CHECKS_PASSED'?'passed':'finding')+'">'+safe(data.status.replaceAll('_',' '))+'</span></div><p>'+data.observations.length+' actual file analyses complete · '+findings.length+' require review · '+data.cross_checks.length+' cross-file consistency checks.</p><div class="human-result-note">Deterministic parser execution. No Meta inference, no external changes, no sensitive file retention in mission history.</div></div>';
+   const intro='<div class="human-result"><div class="human-result-head"><strong>Mission outcome</strong><span class="run-status '+(data.status==='LOCAL_CHECKS_PASSED'?'passed':'finding')+'">'+safe(data.status.replaceAll('_',' '))+'</span></div><p>'+data.observations.length+' actual file analyses complete · '+findings.length+' require review · '+data.cross_checks.length+' cross-file consistency checks.</p><div class="human-result-note">'+(data.model_plan?'Actual model-planned tool order · '+safe(data.model_plan.model)+' · ':'Deterministic local plan · ')+'Deterministic parsers and checks. No external changes. Storage only if explicitly selected.</div></div>';
+   const planNote=data.model_plan?'<div class="human-result"><strong>Meta model plan verified by provider response</strong><p>'+safe(data.model_plan.reason)+'</p><small>Provider model: '+safe(data.model_plan.model)+' · Ordered file roles: '+safe(data.model_plan.ordered_roles.join(', '))+'</small></div>':'';
    const records=data.observations.map(o=>'<div class="outcome-stage"><span class="run-status '+safe(o.status)+'">'+safe(o.status.toUpperCase())+'</span><div><b>'+safe(o.file_name)+'</b><p>'+safe(o.tool)+' · SHA256 '+safe(o.sha256.slice(0,16))+'…</p></div></div>').join('');
    const correlations=data.cross_checks.map(c=>'<div class="outcome-stage"><strong>'+safe(c.matched?'MATCH':'MISMATCH')+'</strong><div><b>'+safe(c.name)+'</b><p>'+safe(c.basis)+'</p></div></div>').join('');
    const mission={id:data.saved_mission_id||'SESSION-'+String(Date.now()),goal,created:new Date().toISOString(),data};
    app.unifiedMissions.unshift(mission);app.unifiedMissions=app.unifiedMissions.slice(0,5);app.selectedUnified=mission.id;
    renderAgentWorkforce();
    if(data.saved_mission_id)await loadUnifiedHistory(token);
-   $('multiResults').innerHTML=intro+'<div class="eyebrow">INDIVIDUAL FILE RESULTS</div>'+records+'<div class="eyebrow multi-spaced">CROSS-FILE CHECKS</div>'+(correlations||'<p class="muted">No matching cross-file check for selected types.</p>')+'<div class="eyebrow multi-spaced">EXECUTION TRACE</div>'+data.trace.map(e=>'<div class="outcome-stage"><span class="step-number">'+safe(e.role.split(' ')[0])+'</span><div><b>'+safe(e.role)+'</b><p>'+safe(e.action.replaceAll('_',' '))+'</p></div></div>').join('')+'<div class="multi-actions"><button type="button" class="run-btn secondary-run" id="downloadMulti">↓ Download verified Markdown report</button><button type="button" class="tiny-btn" id="inspectMissionAgents">◉ Inspect Agent Workforce →</button></div>';
+   $('multiResults').innerHTML=intro+planNote+'<div class="eyebrow">INDIVIDUAL FILE RESULTS</div>'+records+'<div class="eyebrow multi-spaced">CROSS-FILE CHECKS</div>'+(correlations||'<p class="muted">No matching cross-file check for selected types.</p>')+'<div class="eyebrow multi-spaced">EXECUTION TRACE</div>'+data.trace.map(e=>'<div class="outcome-stage"><span class="step-number">'+safe(e.role.split(' ')[0])+'</span><div><b>'+safe(e.role)+'</b><p>'+safe(e.action.replaceAll('_',' '))+'</p></div></div>').join('')+'<div class="multi-actions"><button type="button" class="run-btn secondary-run" id="downloadMulti">↓ Download verified Markdown report</button><button type="button" class="tiny-btn" id="inspectMissionAgents">◉ Inspect Agent Workforce →</button></div>';
    $('inspectMissionAgents').onclick=()=>route('agents');
    $('downloadMulti').onclick=()=>{
      const blob=new Blob([data.report_markdown],{type:'text/markdown;charset=utf-8'});
