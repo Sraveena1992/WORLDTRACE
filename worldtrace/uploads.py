@@ -41,7 +41,7 @@ def inspect(tool, filename, payload, comparison=None):
         if len(reader.pages)>50:raise ValueError("PDF limited to 50 pages")
         text="\n".join(page.extract_text() or "" for page in reader.pages)[:100000]
         checks={"has_text":bool(text.strip()),"mentions_signature":("signature" in text.lower() or "signed" in text.lower()),"mentions_tax_id":"tax id" in text.lower()}
-        result={"pages":len(reader.pages),"characters":len(text),"checks":checks,"excerpt":text[:400],"pass":all(checks.values())}
+        result={"pages":len(reader.pages),"characters":len(text),"checks":checks,"excerpt":text[:400],"pass":checks["has_text"],"document_type":"general_pdf","assessment":"Readable text extracted" if checks["has_text"] else "No extractable text; scanned PDFs need OCR","note":"Signature and tax-ID mentions are informational only; not required for a general PDF. Mentions do not verify authenticity."}
     elif tool=="email_inspect":
         msg=email.message_from_bytes(payload)
         subject=str(msg.get("Subject",""))[:200]
