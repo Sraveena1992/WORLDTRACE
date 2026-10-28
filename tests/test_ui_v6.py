@@ -29,7 +29,7 @@ def test_review_controls_wired_to_authenticated_backend():
 
 def test_cache_busted_styles_and_scripts():
     import re
-    css=re.search(r'/assets/style\\.css\\?v=(\\d+)',HTML)
-    js=re.search(r'/assets/app\\.js\\?v=(\\d+)',HTML)
+    css=re.search(r'/assets/style\.css\?v=(\d+)',HTML)
+    js=re.search(r'/assets/app\.js\?v=(\d+)',HTML)
     assert css and js and css.group(1)==js.group(1)
     assert '.interactive-card:hover' in CSS
