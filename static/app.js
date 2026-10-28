@@ -168,7 +168,8 @@ $('multiRun').onclick=async()=>{
    const mission={id:'SESSION-'+String(Date.now()),goal,created:new Date().toISOString(),data};
    app.unifiedMissions.unshift(mission);app.selectedUnified=mission.id;
    renderAgentWorkforce();
-   $('multiResults').innerHTML=intro+'<div class="eyebrow">INDIVIDUAL FILE RESULTS</div>'+records+'<div class="eyebrow multi-spaced">CROSS-FILE CHECKS</div>'+(correlations||'<p class="muted">No matching cross-file check for selected types.</p>')+'<div class="eyebrow multi-spaced">EXECUTION TRACE</div>'+data.trace.map(e=>'<div class="outcome-stage"><span class="step-number">'+safe(e.role.split(' ')[0])+'</span><div><b>'+safe(e.role)+'</b><p>'+safe(e.action.replaceAll('_',' '))+'</p></div></div>').join('')+'<button type="button" class="run-btn secondary-run" id="downloadMulti">↓ Download verified Markdown report</button>';
+   $('multiResults').innerHTML=intro+'<div class="eyebrow">INDIVIDUAL FILE RESULTS</div>'+records+'<div class="eyebrow multi-spaced">CROSS-FILE CHECKS</div>'+(correlations||'<p class="muted">No matching cross-file check for selected types.</p>')+'<div class="eyebrow multi-spaced">EXECUTION TRACE</div>'+data.trace.map(e=>'<div class="outcome-stage"><span class="step-number">'+safe(e.role.split(' ')[0])+'</span><div><b>'+safe(e.role)+'</b><p>'+safe(e.action.replaceAll('_',' '))+'</p></div></div>').join('')+'<div class="multi-actions"><button type="button" class="run-btn secondary-run" id="downloadMulti">↓ Download verified Markdown report</button><button type="button" class="tiny-btn" id="inspectMissionAgents">◉ Inspect Agent Workforce →</button></div>';
+   $('inspectMissionAgents').onclick=()=>route('agents');
    $('downloadMulti').onclick=()=>{
      const blob=new Blob([data.report_markdown],{type:'text/markdown;charset=utf-8'});
      const url=URL.createObjectURL(blob);
