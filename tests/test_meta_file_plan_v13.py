@@ -57,4 +57,4 @@ def test_opt_in_model_ui():
     js=(path/"app.js").read_text(encoding="utf8")
     assert 'id="multiModel"' in html
     assert "body.append('model_planning'" in js
-    assert 'app.js?v=23' in html
+    assert 'app.js?v=24' in html
