@@ -171,3 +171,81 @@ def make_uploaded_file_plan(goal, roles):
              str(exc.response.status_code)+"). Check activated credits and model access.") from exc
     except (httpx.HTTPError,KeyError,ValueError,TypeError,AttributeError) as exc:
         raise ModelUnavailable("Meta model file planning unavailable: "+type(exc).__name__) from exc
+
+def assess_uploaded_evidence(goal, observations, cross_checks):
+    """Second genuine model call, after tools, with coarse sanitized findings only.
+
+    The model returns non-executable hypotheses. Host validates each evidence
+    reference and refuses extra/unrecognized input roles.
+    """
+    if not configured():
+        raise ModelUnavailable("Meta-compatible inference is not configured")
+    base=os.environ["WORLDTRACE_MODEL_BASE_URL"].rstrip("/")
+    if not base.startswith("https://"):
+        raise ModelUnavailable("HTTPS inference endpoint required")
+    name=os.getenv("WORLDTRACE_MODEL_NAME","meta-models/muse-spark-open-1026")
+    evidence=[]
+    for item in observations:
+        result=item["result"]
+        counts={}
+        for key in ("pages","characters","source_rows","target_rows","failure_count",
+                    "total_requests","messages","records","expected_status","simulated_status"):
+            if type(result.get(key)) is int:
+                counts[key]=result[key]
+        for key in ("missing_ids","extra_ids","mismatched_ids","duplicates","invalid_lines"):
+            if isinstance(result.get(key),list):
+                counts[key+"_count"]=len(result[key])
+        evidence.append({"role":item["role"],"tool":item["tool"],
+                         "status":item["status"],"metrics":counts})
+    role_ids={x["role"] for x in observations}
+    checks=[{"name":c["name"],"matched":c["matched"]} for c in cross_checks]
+    prompt=("You are a cautious operational incident analyst. "
+            "Return JSON ONLY, fields: summary (string), "
+            "hypotheses (1-3 items, each claim string, evidence_roles array, "
+            "confidence low/medium/high), next_action (string). "
+            "Use ONLY the observed counts and checks, no fabricated facts or claims "
+            "of executed repairs. Never propose an external side effect as completed. "
+            "Explicitly distinguish hypotheses from proven observations.")
+    payload={"model":name,"messages":[{"role":"system","content":prompt},
+          {"role":"user","content":json.dumps({"instruction":goal,"evidence":evidence,
+                                               "cross_checks":checks})}],
+          "max_tokens":900,"temperature":0.1}
+    try:
+        with httpx.Client(timeout=45) as client:
+            response=client.post(base+"/chat/completions",json=payload,
+              headers={"Authorization":"Bearer "+os.environ["WORLDTRACE_MODEL_API_KEY"]})
+            response.raise_for_status()
+            data=response.json()
+        parsed=_decode(data["choices"][0]["message"]["content"])
+        if not isinstance(parsed,dict):
+            raise ValueError("Invalid analysis object")
+        summary=parsed.get("summary");next_action=parsed.get("next_action")
+        hypotheses=parsed.get("hypotheses")
+        if not isinstance(summary,str) or not summary.strip() or len(summary)>1000:
+            raise ValueError("Invalid summary")
+        if not isinstance(next_action,str) or not next_action.strip() or len(next_action)>1000:
+            raise ValueError("Invalid next action")
+        if not isinstance(hypotheses,list) or not 1<=len(hypotheses)<=3:
+            raise ValueError("Invalid hypotheses")
+        validated=[]
+        for h in hypotheses:
+            if not isinstance(h,dict):
+                raise ValueError("Invalid hypothesis")
+            claim=h.get("claim");refs=h.get("evidence_roles");confidence=h.get("confidence")
+            if (not isinstance(claim,str) or not claim.strip() or len(claim)>600
+                or not isinstance(refs,list) or not refs
+                or any(not isinstance(ref,str) for ref in refs)
+                or not set(refs).issubset(role_ids)
+                or confidence not in ("low","medium","high")):
+                raise ValueError("Unverifiable hypothesis or unsupported evidence reference")
+            validated.append({"claim":claim,"evidence_roles":list(dict.fromkeys(refs)),
+                              "confidence":confidence})
+        return {"summary":summary,"hypotheses":validated,"next_action":next_action,
+                "model":data.get("model",name),"provider_response_id":data.get("id",""),
+                "scope":"Advisory hypotheses, no autonomous external action",
+                "provided_evidence":"Sanitized role IDs, statuses, and counts only"}
+    except httpx.HTTPStatusError as exc:
+        raise ModelUnavailable("Model evidence reasoning rejected request (HTTP "+
+            str(exc.response.status_code)+"). Check key, credits and access.") from exc
+    except (httpx.HTTPError,KeyError,ValueError,TypeError,AttributeError) as exc:
+        raise ModelUnavailable("Meta evidence reasoning unavailable: "+type(exc).__name__) from exc
