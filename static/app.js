@@ -135,6 +135,20 @@ $('analyzeUpload').onclick=async()=>{
  finally{button.disabled=false;button.textContent='Analyze uploaded file →'}
 };
 
+function summarizeObservation(item){
+ const r=item.result||{};
+ if(item.tool==='etl_compare'){
+  const missing=(r.missing_ids||[]),extra=(r.extra_ids||[]),mismatch=(r.mismatched_ids||[]);
+  return 'Source '+r.source_rows+' rows · Target '+r.target_rows+' rows · Missing: '+(missing.join(', ')||'none')+' · Extra: '+(extra.join(', ')||'none')+' · Value mismatches: '+(mismatch.join(', ')||'none');
+ }
+ if(item.tool==='pdf_inspect')return r.pages+' pages · '+r.characters+' extracted characters. This is text extraction, not accuracy verification.';
+ if(item.tool==='network_inspect')return r.failure_count+' HTTP failures among '+r.total_requests+' recorded requests.';
+ if(item.tool==='email_inspect')return 'Sender '+(r.has_sender?'found':'missing')+' · Subject '+(r.has_subject?'found':'missing')+'. No message was sent.';
+ if(item.tool==='api_virtualize')return 'Expected HTTP '+r.expected_status+' · Simulated HTTP '+r.simulated_status+'. No live API requested.';
+ if(item.tool==='middleware_test')return (r.duplicates||[]).length+' duplicate message IDs detected.';
+ if(item.tool==='mainframe_contract')return (r.invalid_lines||[]).length+' invalid fixed-width rows detected.';
+ return item.status==='passed'?'Configured check passed.':'Review individual tool evidence.';
+}
 const multiFileFor=(role,id)=>app.guidedDemoFiles?.[role]||$(id).files?.[0];
 $('loadGuidedDemo').onclick=()=>{
  app.guidedDemoFiles={
@@ -177,7 +191,7 @@ $('multiRun').onclick=async()=>{
    const intro='<div class="human-result"><div class="human-result-head"><strong>Mission outcome</strong><span class="run-status '+(data.status==='LOCAL_CHECKS_PASSED'?'passed':'finding')+'">'+safe(data.status.replaceAll('_',' '))+'</span></div><p>'+data.observations.length+' actual file analyses complete · '+findings.length+' require review · '+data.cross_checks.length+' cross-file consistency checks.</p><div class="human-result-note">'+(data.model_plan?'Actual model-planned tool order · '+safe(data.model_plan.model)+' · ':'Deterministic local plan · ')+'Deterministic parsers and checks. No external changes. Storage only if explicitly selected.</div></div>';
    const planNote=data.model_plan?'<div class="human-result"><strong>Meta model plan verified by provider response</strong><p>'+safe(data.model_plan.reason)+'</p><small>Provider model: '+safe(data.model_plan.model)+' · Ordered file roles: '+safe(data.model_plan.ordered_roles.join(', '))+'</small></div>':'';
    const modelReasoning=data.model_assessment?'<div class="human-result"><strong>REAL MODEL EVIDENCE ASSESSMENT (ADVISORY)</strong><p>'+safe(data.model_assessment.summary)+'</p>'+data.model_assessment.hypotheses.map(h=>'<p>Hypothesis: '+safe(h.claim)+' · '+safe(h.confidence)+' confidence · Sources: '+safe(h.evidence_roles.join(', '))+'</p>').join('')+'<p><strong>Next:</strong> '+safe(data.model_assessment.next_action)+'</p></div>':'';
-   const records=data.observations.map(o=>'<div class="outcome-stage"><span class="run-status '+safe(o.status)+'">'+safe(o.status.toUpperCase())+'</span><div><b>'+safe(o.file_name)+'</b><p>'+safe(o.tool)+' · SHA256 '+safe(o.sha256.slice(0,16))+'…</p></div></div>').join('');
+   const records=data.observations.map(o=>'<div class="outcome-stage"><span class="run-status '+safe(o.status)+'">'+safe(o.status.toUpperCase())+'</span><div><b>'+safe(o.file_name)+'</b><p>'+safe(summarizeObservation(o))+'</p><small>'+safe(o.tool)+' · SHA-256 '+safe(o.sha256.slice(0,16))+'…</small></div></div>').join('');
    const correlations=data.cross_checks.map(c=>'<div class="outcome-stage"><strong>'+safe(c.matched?'MATCH':'MISMATCH')+'</strong><div><b>'+safe(c.name)+'</b><p>'+safe(c.basis)+'</p></div></div>').join('');
    const mission={id:data.saved_mission_id||'SESSION-'+String(Date.now()),goal,created:new Date().toISOString(),data};
    app.unifiedMissions.unshift(mission);app.unifiedMissions=app.unifiedMissions.slice(0,5);app.selectedUnified=mission.id;
