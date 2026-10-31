@@ -55,9 +55,37 @@ def get(mid):
         result=json.loads(row["result_json"])
         report_verified=hashlib.sha256(row["report"].encode()).hexdigest()==row["report_sha256"]
         trace_verified=multifile.verify_trace(result.get("trace",[]))
-        return {"report_verified":report_verified,"trace_verified":trace_verified,"id":mid,"created":row["created"],**result,
+        reviews=decisions(mid)
+        executions=sandbox_recovery.history(mid)
+        receipt=""
+        if executions:
+            receipt_lines=["# WORLDTRACE — Approved Sandbox Resolution Receipt","",
+                "Mission: "+mid,
+                "Scope: isolated SQLite demo with salted record hashes; no original file edits.",
+                "Original investigation report SHA-256: "+row["report_sha256"],""]
+            for run in executions:
+                matching=next((d for d in reviews if d["action_index"]==run["action_index"]),None)
+                receipt_lines += [
+                    "## Approved demo action "+str(run["action_index"]),
+                    "Human decision: "+(matching["decision"] if matching else "UNKNOWN"),
+                    "Reviewer: "+(matching["reviewer"] if matching else "UNKNOWN"),
+                    "Executed at: "+run["executed_at"],
+                    "Before target rows: "+str(run["before_count"]),
+                    "After target rows: "+str(run["after_count"]),
+                    "Hashed records inserted: "+str(run["added_records"]),
+                    "Reverification result: "+("PASS" if run["verified"] else "FAIL"),
+                    "Before-state SHA-256: "+run["before_digest"],
+                    "After-state SHA-256: "+run["after_digest"],""]
+            receipt_lines += ["No external writes or production supplier changes occurred.",
+                              "The verification proves only this isolated demo database state.",
+                              "Original evidence report and its SHA-256 remain unchanged."]
+            receipt="\n".join(receipt_lines)+"\n"
+        return {"report_verified":report_verified,"trace_verified":trace_verified,
+                "resolution_report_markdown":receipt,
+                "resolution_report_sha256":hashlib.sha256(receipt.encode()).hexdigest() if receipt else None,
+                "id":mid,"created":row["created"],**result,
                 "report_markdown":row["report"],"report_sha256":row["report_sha256"],
-                "decisions":decisions(mid), "sandbox_executions":sandbox_recovery.history(mid)}
+                "decisions":reviews, "sandbox_executions":executions}
 
 def decisions(mid):
     _check_id(mid)
