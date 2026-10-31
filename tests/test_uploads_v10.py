@@ -61,4 +61,4 @@ def test_upload_ui_is_wired():
     assert 'id="uploadComparison"' in html
     assert "'/inspect-upload'" in js
     assert "'X-WORLDTRACE-TOKEN':token" in js
-    assert 'data.source' not in js or "USER FILE ANALYSIS" in js
+    assert "USER FILE ANALYSIS" in js
