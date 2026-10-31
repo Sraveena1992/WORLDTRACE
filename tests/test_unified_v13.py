@@ -62,4 +62,4 @@ def test_ui_contains_real_persistence_controls():
     assert "body.append('retain_result'" in js
     assert "api('/api/unified-missions'" in js
     assert "approve_manual_followup" in js
-    assert '/assets/app.js?v=18' in html
+    assert '/assets/app.js?v=20' in html
