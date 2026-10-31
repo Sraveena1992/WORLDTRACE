@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>WORLDTRACE — Autonomous Execution. Verifiable Outcomes.</title><link rel="stylesheet" href="/assets/style.css?v=22"/></head><body>
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>WORLDTRACE — Autonomous Execution. Verifiable Outcomes.</title><link rel="stylesheet" href="/assets/style.css?v=23"/></head><body>
 <div class="shell"><aside class="sidebar"><a class="brand" href="/"><div class="mark" aria-label="WORLDTRACE logo"><svg viewBox="0 0 96 96" role="img" aria-label="WORLDTRACE orbital trace emblem"><defs><linearGradient id="markGlow" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#39eacd"/><stop offset=".48" stop-color="#5cc9ff"/><stop offset="1" stop-color="#bb91ff"/></linearGradient><linearGradient id="markBase" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#1d4563"/><stop offset="1" stop-color="#091528"/></linearGradient></defs><path d="M48 4 84 25 84 69 48 91 12 69 12 25Z" fill="url(#markBase)" stroke="#62cce6" stroke-width="2.5" opacity=".95"/><path d="M16 70C-2 40 46 5 80 24" fill="none" stroke="url(#markGlow)" stroke-width="3" stroke-linecap="round" opacity=".85"/><path d="M80 27C101 57 53 90 17 70" fill="none" stroke="#9e9bff" stroke-width="2.5" stroke-linecap="round" opacity=".8"/><path d="M24 31 35 65 48 42 61 65 73 31" fill="none" stroke="url(#markGlow)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="70" r="5" fill="#51f0df" stroke="#11293b" stroke-width="2"/><circle cx="80" cy="24" r="4" fill="#ba9aff"/><circle cx="48" cy="42" r="3" fill="#eaffff"/></svg></div><div><strong>WORLDTRACE</strong><span>AGENTIC EXECUTION OS</span></div></a>
 <div class="nav-label">WORKSPACE</div><nav><button class="navitem active" data-route="overview"><span class="nav-symbol">⌘</span> <span>Mission Control</span></button><button class="navitem" data-route="agents"><span class="nav-symbol">◉</span> <span>Agent Workforce</span></button><button class="navitem" data-route="tools"><span class="nav-symbol">▦</span> <span>Enterprise Tools</span></button><button class="navitem" data-route="audit"><span class="nav-symbol">⬡</span> <span>Evidence Ledger</span></button><button class="navitem" data-route="deliverables"><span class="nav-symbol">✦</span> <span>Outcome Studio</span></button><button class="navitem" data-route="reviews"><span class="nav-symbol">✓</span> <span>Human Review</span></button></nav>
 <div class="nav-label">SYSTEM</div><div class="system-small"><span class="pulse"></span> LOCAL ENGINE ONLINE</div><div class="sidebar-bottom"><div class="mini-label">BUILD EDITION</div><div class="small">Hackathon prototype · v0.1.0</div><div class="divider"></div><div class="small muted">Verified fixture execution. No simulated external writes presented as real.</div></div></aside>
@@ -43,9 +43,14 @@ Vendor approval remains pending.</textarea>
 <div class="workspace-columns">
 <section class="panel"><div class="panel-header"><div><div class="eyebrow">01 / MISSION REQUEST</div><h2>Instruction and evidence</h2><p>No source files are permanently stored by this feature.</p></div></div>
 <div class="guided-demo">
-<strong>START HERE — GUIDED SUPPLIER RESOLUTION</strong>
-<p>Try one complete, controlled scenario: detect a missing supplier record → review the proposed correction → approve → execute only on an isolated demo database → verify before and after. No production writes.</p>
-<button type="button" class="run-btn secondary-run" id="loadGuidedDemo">Load safe demo evidence and instruction →</button>
+<strong>START HERE — FULL GUIDED DEMO, NO KEY REQUIRED</strong>
+<p>Try a real backend execution in a self-contained synthetic session: detect missing record A3 → approve the proposed action → insert only into an isolated in-memory SQLite demo → verify the actual after-state. No external integrations or production changes.</p>
+<button type="button" class="run-btn secondary-run" id="startPublicDemo">▶ Start complete guided demo (no login) →</button>
+<div id="publicDemoOutput" aria-live="polite"><div class="mini-status">Ready to investigate the sample supplier mismatch.</div></div>
+<div class="demo-mode-divider"></div>
+<strong>PRIVATE OPERATOR MODE</strong>
+<p>Alternatively, load synthetic CSVs into the private unified mission pipeline or upload your own authorized, non-sensitive evidence below. The private mode requires a WORLDTRACE operator token.</p>
+<button type="button" class="tiny-btn" id="loadGuidedDemo">Load safe CSVs into private mission →</button>
 <div id="guidedDemoStatus" class="mini-status" role="status"></div>
 </div>
 <label class="field-label" for="multiGoal">ONE INSTRUCTION</label>
@@ -68,4 +73,4 @@ Vendor approval remains pending.</textarea>
 <section class="panel"><div class="panel-header"><div><div class="eyebrow">03 / AGENTS, FINDINGS AND DELIVERY</div><h2>Coordinated evidence</h2><p>Tool results and cross-file consistency checks are displayed here.</p></div></div>
 <div id="multiResults" class="module-result-placeholder">Choose one or more files and execute the mission.</div><div class="unified-saved"><div class="panel-header"><div><h2>Saved missions</h2><p>Only explicitly saved results. Private token required.</p></div><button id="loadUnifiedHistory" type="button" class="tiny-btn">↻ Load saved</button></div><div id="unifiedHistory" class="workspace-history">Saved mission history has not been loaded.</div></div>
 </section>
-</div></section></main></div><script src="/assets/app.js?v=22" defer></script></body></html>
+</div></section></main></div><script src="/assets/app.js?v=23" defer></script></body></html>
