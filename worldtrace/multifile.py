@@ -46,7 +46,7 @@ def run(goal, files, model_plan=None, reasoner=None):
     _event(events, "Research Agent", "inventory_user_evidence",
            {"roles": sorted(files), "source": "user supplied"})
     _event(events, "Security Agent", "enforce_bounded_parsers",
-           {"external_calls": 1 if model_plan else 0, "external_writes": 0, "model_calls": (1 + (1 if reasoner is not None else 0)) if model_plan else 0})
+           {"external_calls": 1 + (1 if reasoner is not None else 0) if model_plan else 0, "external_writes": 0, "model_calls": (1 + (1 if reasoner is not None else 0)) if model_plan else 0})
     observations = []
     for role in ordered:
         if role == "target_csv":
@@ -139,3 +139,19 @@ def run(goal, files, model_plan=None, reasoner=None):
             "report_markdown": report, "report_sha256": digest,
             "privacy": "Uploaded inputs processed in memory; no mission-history storage",
             "limitations": "No autonomous repairs or production integrations; deterministic tools and verification" if model_plan else "No Meta reasoning, autonomous repairs or production integrations"}
+
+def verify_trace(events):
+    """Verify continuity and digests for stage-level evidence after persistence."""
+    previous="GENESIS"
+    for item in events:
+        if item.get("prev_hash")!=previous:
+            return False
+        canonical=json.dumps({
+            "role":item.get("role"),"action":item.get("action"),
+            "details":item.get("details"),"prev":previous,
+            "time":item.get("time")},sort_keys=True)
+        expected=hashlib.sha256(canonical.encode()).hexdigest()
+        if expected!=item.get("hash"):
+            return False
+        previous=expected
+    return bool(events)
