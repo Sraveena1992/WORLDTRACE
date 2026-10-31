@@ -8,7 +8,7 @@ import json
 import re
 import sqlite3
 from uuid import uuid4
-from . import storage, sandbox_recovery
+from . import storage, sandbox_recovery, multifile
 
 ID_PATTERN=re.compile(r"UM-[0-9A-F]{16}$")
 
@@ -53,7 +53,9 @@ def get(mid):
         row=conn.execute("SELECT * FROM unified_records WHERE id=?",(mid,)).fetchone()
         if row is None:raise ValueError("Mission not found")
         result=json.loads(row["result_json"])
-        return {"id":mid,"created":row["created"],**result,
+        report_verified=hashlib.sha256(row["report"].encode()).hexdigest()==row["report_sha256"]
+        trace_verified=multifile.verify_trace(result.get("trace",[]))
+        return {"report_verified":report_verified,"trace_verified":trace_verified,"id":mid,"created":row["created"],**result,
                 "report_markdown":row["report"],"report_sha256":row["report_sha256"],
                 "decisions":decisions(mid), "sandbox_executions":sandbox_recovery.history(mid)}
 
