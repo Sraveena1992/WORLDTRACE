@@ -20,7 +20,7 @@ def _event(events, role, action, details):
     events.append({"role": role, "action": action, "details": details,
                    "time": stamp, "prev_hash": previous, "hash": digest})
 
-def run(goal, files, model_plan=None):
+def run(goal, files, model_plan=None, reasoner=None):
     if not isinstance(goal, str) or not 12 <= len(goal.strip()) <= 1500:
         raise ValueError("Instruction must be 12-1500 characters")
     if not 1 <= len(files) <= len(FIELDS) or set(files) - set(FIELDS):
@@ -46,7 +46,7 @@ def run(goal, files, model_plan=None):
     _event(events, "Research Agent", "inventory_user_evidence",
            {"roles": sorted(files), "source": "user supplied"})
     _event(events, "Security Agent", "enforce_bounded_parsers",
-           {"external_calls": 1 if model_plan else 0, "external_writes": 0, "model_calls": 1 if model_plan else 0})
+           {"external_calls": 1 if model_plan else 0, "external_writes": 0, "model_calls": (1 + (1 if reasoner is not None else 0)) if model_plan else 0})
     observations = []
     for role in ordered:
         if role == "target_csv":
@@ -67,6 +67,13 @@ def run(goal, files, model_plan=None):
                        "matched": simulated in statuses,
                        "basis": "Recorded HAR versus simulated API JSON; not real service confirmation",
                        "observed_statuses": sorted(statuses), "simulated_status": simulated})
+    model_assessment=None
+    if model_plan is not None and reasoner is not None:
+        model_assessment=reasoner(goal,observations,checks)
+        _event(events, "Mission Commander", "meta_model_evidence_assessment",
+               {"model":model_assessment.get("model",""),
+                "provider_response_id":model_assessment.get("provider_response_id",""),
+                "hypotheses":len(model_assessment.get("hypotheses",[]))})
     findings = [item for item in observations if item["status"] != "passed"]
     verdict = "REVIEW_NEEDED" if findings or any(not check["matched"] for check in checks) else "LOCAL_CHECKS_PASSED"
     _event(events, "Verification Agent", "compare_evidence_and_checks",
@@ -111,6 +118,9 @@ def run(goal, files, model_plan=None):
                          "Tool: " + item["tool"], "Status: " + item["status"],
                          "SHA-256: " + item["sha256"],
                          json.dumps(item["result"], indent=2, ensure_ascii=False)]
+    if model_assessment is not None:
+        report_lines += ["", "## Meta model hypotheses (not verified facts)",
+                         json.dumps(model_assessment,indent=2,ensure_ascii=False)]
     report_lines += ["", "## Cross-file consistency", json.dumps(checks, indent=2),
                      "", "## Human review recommendations", json.dumps(actions, indent=2),
                      "", "## Limits",
@@ -121,7 +131,8 @@ def run(goal, files, model_plan=None):
     _event(events, "Delivery Agent", "produce_verified_markdown",
            {"report_sha256": digest, "bytes": len(report.encode())})
     return {"mode": "meta_planned_multi_file" if model_plan else "deterministic_multi_file",
-            "model_plan": model_plan, "status": verdict,
+            "model_plan": model_plan, "model_assessment": model_assessment,
+            "status": verdict,
             "demo_repair": demo_repair,
             "goal": goal.strip(), "observations": observations,
             "cross_checks": checks, "proposed_actions": actions, "trace": events,
