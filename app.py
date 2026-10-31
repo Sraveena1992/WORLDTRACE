@@ -207,7 +207,8 @@ async def run_uploaded_multi_file_mission(
             if model_planning:
                 try:model_plan=agent.make_uploaded_file_plan(goal,list(selected))
                 except agent.ModelUnavailable as exc:raise HTTPException(424,str(exc)) from exc
-            result=multifile.run(goal, selected, model_plan=model_plan)
+            result=multifile.run(goal, selected, model_plan=model_plan,
+                reasoner=agent.assess_uploaded_evidence if model_planning else None)
             if retain_result:
                 record=unified_records.record(result)
                 result['saved_mission_id']=record['id']
@@ -215,6 +216,8 @@ async def run_uploaded_multi_file_mission(
             return result
         except HTTPException:
             raise
+        except agent.ModelUnavailable as exc:
+            raise HTTPException(424,str(exc)) from exc
         except (ValueError, UnicodeError, KeyError, TypeError) as exc:
             raise HTTPException(422, str(exc)[:220]) from exc
         except Exception as exc:
