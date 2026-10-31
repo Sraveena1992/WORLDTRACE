@@ -36,4 +36,4 @@ def test_model_probe_ui_is_explicit():
     assert "may use credits" in html
     assert "$('probeModel').onclick" in js
     assert "fetch('/api/model/probe'" in js
-    assert '/assets/app.js?v=18' in html
+    assert '/assets/app.js?v=20' in html
