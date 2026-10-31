@@ -6,8 +6,8 @@ import app
 client=TestClient(app.app)
 TOKEN="v13-planning-test-token"
 HEAD={"X-WORLDTRACE-TOKEN":TOKEN}
-FILES={"source_csv":("source.csv",b"id,name\nA1,A\nA2,B\n","text/csv"),
-       "target_csv":("target.csv",b"id,name\nA1,A\n","text/csv")}
+FILES={"source_csv":("source.csv",b"id,name\nA1,A\nA2,B\n"),
+       "target_csv":("target.csv",b"id,name\nA1,A\n")}
 
 def test_model_plan_is_rejected_if_roles_change():
     try:
