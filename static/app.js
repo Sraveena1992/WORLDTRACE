@@ -299,13 +299,22 @@ async function loadUnifiedReviewQueue(providedToken,selectedId){
     (r.proposed_actions.length?r.proposed_actions.map((a,i)=>{
       const d=decisions.get(i), run=executed.get(i);
       const buttons=!d?'<button class="tiny-btn" data-unified-review="'+safe(r.id)+'" data-action-index="'+i+'" data-decision="approve_manual_followup">Approve manual follow-up</button> <button class="tiny-btn" data-unified-review="'+safe(r.id)+'" data-action-index="'+i+'" data-decision="reject">Reject</button>':
-        run?'<div class="sandbox-verified"><strong>VERIFIED IN ISOLATED DEMO</strong><p>Before '+run.before_count+' → After '+run.after_count+' · '+run.added_records+' hashed records added. Original CSV untouched. No external changes.</p><small>Post-execution SHA-256 '+safe(run.after_digest)+'</small></div>':
+        run?'<div class="sandbox-verified"><strong>VERIFIED IN ISOLATED DEMO</strong><p>Before '+run.before_count+' → After '+run.after_count+' · '+run.added_records+' hashed records added. Original CSV untouched. No external changes.</p><small>Post-execution SHA-256 '+safe(run.after_digest)+'</small><button type="button" class="tiny-btn" data-receipt-id="'+safe(r.id)+'">↓ Download signed-off demo resolution receipt</button></div>':
         d==='approve_manual_followup'&&a.type==='sandbox_csv_reconcile'?
         '<button type="button" class="run-btn secondary-run" data-execute-demo="'+safe(r.id)+'" data-action-index="'+i+'">Execute approved demo correction & re-verify →</button>':
         '<small>'+safe(d.replaceAll('_',' '))+' recorded · No automatic external action.</small>';
       return '<div class="unified-review-action"><p><b>'+safe(a.type==='sandbox_csv_reconcile'?'CONTROLLED DEMO CORRECTION':'MANUAL REVIEW')+'</b> · '+safe(a.file||'Input')+': '+safe(a.next_action)+'</p>'+buttons+'</div>';
     }).join(''):'<p>No follow-up actions proposed.</p>')+'</div>';
   }).join('')||'<p>No saved missions found.</p>';
+  out.querySelectorAll('[data-receipt-id]').forEach(btn=>btn.onclick=async()=>{
+    try{
+      const id=btn.dataset.receiptId;
+      const data=await api('/api/unified-missions/'+encodeURIComponent(id),{
+        headers:{'X-WORLDTRACE-TOKEN':token}});
+      if(!data.resolution_report_markdown||!data.resolution_report_sha256)throw Error('Receipt not ready');
+      downloadMarkdown(data.resolution_report_markdown,id+'-sandbox-resolution.md');
+    }catch(e){out.insertAdjacentHTML('afterbegin','<p class="error">Receipt unavailable: '+safe(e.message)+'</p>')}
+  });
   out.querySelectorAll('[data-execute-demo]').forEach(btn=>btn.onclick=async()=>{
     const confirmText='Execute only the APPROVED correction on an isolated SQLite demo copy of hashed CSV rows? Uploaded CSVs, external systems and production data remain unchanged.';
     if(!window.confirm(confirmText))return;
