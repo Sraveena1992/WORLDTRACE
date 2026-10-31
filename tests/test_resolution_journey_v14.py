@@ -57,4 +57,4 @@ def test_guided_demo_and_integrated_workspaces_have_real_controls():
                    "data-role-detail", "data.model_assessment"):
         assert marker in js
     assert (root/"scripts/demo_resolution.py").is_file()
-    assert '/assets/app.js?v=21' in html
+    assert '/assets/app.js?v=22' in html
