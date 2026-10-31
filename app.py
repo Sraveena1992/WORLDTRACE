@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException, Header, File, UploadFile, Form
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from worldtrace import agent,engine,storage,tools,samples,delivery,uploads,multifile,unified_records
+from worldtrace import agent,engine,storage,tools,samples,delivery,uploads,multifile,unified_records,sandbox_recovery
 
 app=FastAPI(title='WORLDTRACE',version='0.1.0',description='Verifiable local workflow prototype with optional actual Meta-model orchestration')
 STATIC=Path(__file__).parent/'static'
@@ -20,6 +20,9 @@ class DeliverableIn(BaseModel):
     goal: str=Field(min_length=12,max_length=1500)
     evidence: str=Field(default='',max_length=12000)
     domain: str='supplier_onboarding'
+
+class DemoCorrectionIn(BaseModel):
+    action_index: int = Field(ge=0)
 
 class UnifiedDecisionIn(BaseModel):
     action_index: int = Field(ge=0)
@@ -246,3 +249,12 @@ def probe_model_inference(x_worldtrace_token: str | None = Header(default=None))
     require_mission_token(x_worldtrace_token)
     try:return agent.probe_provider()
     except agent.ModelUnavailable as exc:raise HTTPException(424,str(exc)) from exc
+
+@app.post('/api/unified-missions/{mission_id}/execute-demo-correction',status_code=201)
+def execute_approved_demo_correction(mission_id:str, req:DemoCorrectionIn,
+                     x_worldtrace_token: str | None=Header(default=None)):
+    """Approved sandbox-only row correction, with transaction and exact re-verification."""
+    require_mission_token(x_worldtrace_token)
+    try:return sandbox_recovery.execute(mission_id,req.action_index)
+    except ValueError as exc:
+        raise HTTPException(404 if 'Mission not found' in str(exc) else 409,str(exc)) from exc
