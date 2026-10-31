@@ -31,6 +31,18 @@ The guided scenario begins with **three source rows and two target rows**. WORLD
 
 Six functional role names reflect **recorded processing stages**, not six separate AI inference agents.
 
+## 🌐 Try the whole synthetic resolution in the browser — no secret required
+
+Open the [public WORLDTRACE prototype](https://worldtrace.onrender.com/). Click **Launch guided resolution demo** → **Start complete guided demo (no login)**. The server creates a fresh short-lived, randomly identified, *synthetic-only* demo with its own SQLite `:memory:` database. The visitor can:
+
+1. See the real CSV-parser finding: synthetic source 3, synthetic target 2, missing `A3`.
+2. Explicitly click **Approve isolated demo correction**.
+3. Separately click **Execute approved SQLite correction & re-verify** and confirm scope.
+4. Observe the SQLite target change from 2 to 3 hashed records and the expected-source comparison pass.
+5. Inspect a hash-chained processing trace and download an honest demo receipt.
+
+**No API key, customer uploads, external service, Meta model call or production database connection is used.** Sessions expire after 20 minutes; the server bounds active sessions to prevent unbounded demo storage. This public route is **not** full user authentication or permission to execute on an external system. The separate private Mission Control upload/approval workflow still requires an operator token.
+
 ## ▶️ Reproduce the full demo in one command
 
 Requires Python 3.11+, including Windows PowerShell.
@@ -61,7 +73,7 @@ python -m pytest -q
 
 ## 🌐 Browser walkthrough
 
-1. Open the [live app](https://worldtrace.onrender.com/). Enter **Mission Control → Start unified mission**.
+1. Open the [live app](https://worldtrace.onrender.com/). Enter **Mission Control → Launch guided resolution demo**. Choose the **public no-key route** above or the separate private real-upload route below.
 2. Click **Load safe demo evidence and instruction**. This loads only synthetic browser-created CSVs, enables opt-in report storage, and leaves model planning disabled.
 3. Click **Execute multi-file analysis**. Enter the private `WORLDTRACE_MISSION_TOKEN` (never the provider API key).
 4. Inspect the actual CSV finding: source has 3 rows, target has 2, missing `A3`.
