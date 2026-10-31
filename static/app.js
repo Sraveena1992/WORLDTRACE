@@ -220,8 +220,19 @@ function renderAgentWorkforce(){
   const count=matched.length;
   const outcome=mission?count+' recorded operation'+(count===1?'':'s'):'Awaiting mission';
   return '<article class="agent-card role-card"><div class="agent-icon">◈</div><h3>'+safe(title)+'</h3><p>'+safe(description)+'</p><div class="mini-status">'+safe(outcome)+'</div>'+
-    (mission?'<div class="role-evidence">'+matched.map(e=>'<div><strong>'+safe(e.action.replaceAll('_',' '))+'</strong><small>'+safe(JSON.stringify(e.details).slice(0,260))+'</small></div>').join('')+'</div>':'')+'</article>'
+    (mission?'<div class="role-evidence">'+matched.map(e=>'<div><strong>'+safe(e.action.replaceAll('_',' '))+'</strong><small>'+safe(JSON.stringify(e.details).slice(0,260))+'</small></div>').join('')+'</div>':'')+
+   '<button type="button" class="tiny-btn agent-evidence-btn" data-role-detail="'+safe(title)+'">Inspect role and evidence →</button></article>'
  }).join('');
+ $('agentGrid').querySelectorAll('[data-role-detail]').forEach(btn=>btn.onclick=()=>{
+   const title=btn.dataset.roleDetail;
+   const responsibility=RESPONSIBILITIES.find(x=>x[0]===title);
+   const matching=mission?mission.data.trace.filter(e=>e.role===title):[];
+   $('agentRoleDetail').innerHTML='<h2>'+safe(title)+'</h2><p>'+safe(responsibility?.[1]||'Scoped responsibility')+'</p>'+
+    (mission?'<p><strong>Mission:</strong> '+safe(mission.id)+' · '+matching.length+' actual stage records</p>'+
+      matching.map(e=>'<div class="role-evidence-detail"><strong>'+safe(e.action.replaceAll('_',' '))+'</strong><p>'+safe(JSON.stringify(e.details,null,2))+'</p><small>Event SHA-256: '+safe(e.hash)+'</small></div>').join(''):
+      '<p>No mission evidence yet. Start the guided supplier-resolution demo from Mission Control, then return to inspect actual operations.</p>');
+   $('agentRoleDetail').scrollIntoView({behavior:'smooth',block:'nearest'});
+ });
 }
 $('agentMissionSelect').onchange=e=>{app.selectedUnified=e.target.value;renderAgentWorkforce()};
 
@@ -329,3 +340,22 @@ for(const [role,id] of multiFields){
   if(app.guidedDemoFiles){app.guidedDemoFiles=null;$('guidedDemoStatus').textContent='Guided demo cleared; using your selected files instead.'}
  });
 }
+
+$('loadSavedAgentMissions').onclick=async()=>{
+ const token=privateToken();if(!token)return;
+ try{
+  const rows=await api('/api/unified-missions',{headers:{'X-WORLDTRACE-TOKEN':token}});
+  const complete=await Promise.all(rows.slice(0,10).map(r=>api('/api/unified-missions/'+encodeURIComponent(r.id),{
+   headers:{'X-WORLDTRACE-TOKEN':token}})));
+  for(const data of complete){
+   if(!app.unifiedMissions.some(m=>m.id===data.id)){
+    app.unifiedMissions.push({id:data.id,goal:data.goal,created:data.created,data});
+   }
+  }
+  renderAgentWorkforce();
+  $('agentRoleDetail').innerHTML='<h2>Saved missions loaded</h2><p>'+complete.length+' operator-authorized result records available. Choose a mission above, then inspect a role.</p>';
+ }catch(e){
+  if(/403|authorization|token/i.test(e.message))app.missionToken=null;
+  $('agentRoleDetail').textContent='Could not load saved mission evidence: '+e.message;
+ }
+};
