@@ -37,6 +37,7 @@ def test_mocked_provider_plan_provenance(monkeypatch,tmp_path):
         return {"ordered_roles":["target_csv","source_csv"],"reason":"inspect both files safely",
                 "model":"TEST-MODEL-MOCK","provider_response_id":"test-only-id"}
     monkeypatch.setattr(agent,"make_uploaded_file_plan",plan)
+    monkeypatch.setattr(agent,"assess_uploaded_evidence",lambda goal,obs,checks: {"summary":"Missing record detected","hypotheses":[{"claim":"Source and target differ","evidence_roles":["source_csv"],"confidence":"high"}],"next_action":"Request review","model":"TEST-MODEL-MOCK","provider_response_id":"second-mock-id"})
     response=client.post("/api/multi-file-missions/run",data={
         "goal":"Investigate uploaded CSV and propose safe processing order",
         "model_planning":"true"},files=FILES,headers=HEAD)
@@ -45,6 +46,8 @@ def test_mocked_provider_plan_provenance(monkeypatch,tmp_path):
     assert result["mode"]=="meta_planned_multi_file"
     assert result["trace"][0]["role"]=="Mission Commander"
     assert result["model_plan"]["model"]=="TEST-MODEL-MOCK"
+    assert result["model_assessment"]["summary"]=="Missing record detected"
+    assert any(e["action"]=="meta_model_evidence_assessment" for e in result["trace"])
     assert result["observations"][0]["result"]["missing_ids"]==["A2"]
 
 def test_opt_in_model_ui():
@@ -54,4 +57,4 @@ def test_opt_in_model_ui():
     js=(path/"app.js").read_text(encoding="utf8")
     assert 'id="multiModel"' in html
     assert "body.append('model_planning'" in js
-    assert 'app.js?v=17' in html
+    assert 'app.js?v=18' in html
