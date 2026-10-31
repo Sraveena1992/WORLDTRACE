@@ -253,11 +253,31 @@ async function loadUnifiedReviewQueue(providedToken,selectedId){
   const records=await Promise.all(rows.slice(0,20).map(r=>api('/api/unified-missions/'+encodeURIComponent(r.id),{headers:{'X-WORLDTRACE-TOKEN':token}})));
   const selected=selectedId?records.filter(r=>r.id===selectedId):records;
   out.innerHTML=selected.map(r=>{
-   const decided=new Set((r.decisions||[]).map(d=>d.action_index));
+   const decisions=new Map((r.decisions||[]).map(d=>[d.action_index,d.decision]));
+   const executed=new Map((r.sandbox_executions||[]).map(x=>[x.action_index,x]));
    return '<div class="unified-review-record"><strong>'+safe(r.id)+' · '+safe(r.goal.slice(0,85))+'</strong>'+
-    (r.proposed_actions.length?r.proposed_actions.map((a,i)=>'<div class="unified-review-action"><p>'+safe(a.file||'Input')+': '+safe(a.next_action)+'</p>'+
-      (decided.has(i)?'<small>Already reviewed — no external execution</small>':'<button class="tiny-btn" data-unified-review="'+safe(r.id)+'" data-action-index="'+i+'" data-decision="approve_manual_followup">Approve manual follow-up</button> <button class="tiny-btn" data-unified-review="'+safe(r.id)+'" data-action-index="'+i+'" data-decision="reject">Reject</button>')+'</div>').join(''):'<p>No follow-up actions proposed.</p>')+'</div>';
+    (r.proposed_actions.length?r.proposed_actions.map((a,i)=>{
+      const d=decisions.get(i), run=executed.get(i);
+      const buttons=!d?'<button class="tiny-btn" data-unified-review="'+safe(r.id)+'" data-action-index="'+i+'" data-decision="approve_manual_followup">Approve manual follow-up</button> <button class="tiny-btn" data-unified-review="'+safe(r.id)+'" data-action-index="'+i+'" data-decision="reject">Reject</button>':
+        run?'<div class="sandbox-verified"><strong>VERIFIED IN ISOLATED DEMO</strong><p>Before '+run.before_count+' → After '+run.after_count+' · '+run.added_records+' hashed records added. Original CSV untouched. No external changes.</p><small>Post-execution SHA-256 '+safe(run.after_digest)+'</small></div>':
+        d==='approve_manual_followup'&&a.type==='sandbox_csv_reconcile'?
+        '<button type="button" class="run-btn secondary-run" data-execute-demo="'+safe(r.id)+'" data-action-index="'+i+'">Execute approved demo correction & re-verify →</button>':
+        '<small>'+safe(d.replaceAll('_',' '))+' recorded · No automatic external action.</small>';
+      return '<div class="unified-review-action"><p><b>'+safe(a.type==='sandbox_csv_reconcile'?'CONTROLLED DEMO CORRECTION':'MANUAL REVIEW')+'</b> · '+safe(a.file||'Input')+': '+safe(a.next_action)+'</p>'+buttons+'</div>';
+    }).join(''):'<p>No follow-up actions proposed.</p>')+'</div>';
   }).join('')||'<p>No saved missions found.</p>';
+  out.querySelectorAll('[data-execute-demo]').forEach(btn=>btn.onclick=async()=>{
+    const confirmText='Execute only the APPROVED correction on an isolated SQLite demo copy of hashed CSV rows? Uploaded CSVs, external systems and production data remain unchanged.';
+    if(!window.confirm(confirmText))return;
+    btn.disabled=true;btn.textContent='Executing & verifying demo database…';
+    try{
+      const result=await api('/api/unified-missions/'+encodeURIComponent(btn.dataset.executeDemo)+'/execute-demo-correction',{
+        method:'POST',headers:{'Content-Type':'application/json','X-WORLDTRACE-TOKEN':token},
+        body:JSON.stringify({action_index:Number(btn.dataset.actionIndex)})});
+      await loadUnifiedReviewQueue(token,selectedId);
+      $('unifiedReviewQueue').insertAdjacentHTML('afterbegin','<div class="sandbox-verified"><strong>ACTUAL SANDBOX EXECUTION VERIFIED</strong><p>Added '+safe(result.rows_added)+' hashed records to local demo database. Before '+safe(result.before_count)+' → After '+safe(result.after_count)+'. Original source data unchanged.</p></div>');
+    }catch(e){btn.disabled=false;btn.textContent='Retry demo correction';out.insertAdjacentHTML('afterbegin','<p class="error">Sandbox correction failed: '+safe(e.message)+'</p>')}
+  });
   out.querySelectorAll('[data-unified-review]').forEach(btn=>btn.onclick=async()=>{
     const reviewer=window.prompt('Reviewer name for audit record:');
     if(!reviewer||reviewer.trim().length<2)return;
