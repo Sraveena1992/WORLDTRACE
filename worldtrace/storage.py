@@ -4,12 +4,25 @@ from pathlib import Path
 from uuid import uuid4
 
 LOCK = threading.RLock()
+
+class ClosingConnection(sqlite3.Connection):
+    """sqlite3 context manager that commits/rolls back AND closes the handle.
+
+    sqlite3.Connection.__exit__ by itself does not close the DB. On Windows,
+    that leaves temporary test databases locked against folder deletion.
+    """
+    def __exit__(self, exc_type, exc_value, traceback):
+        try:
+            return super().__exit__(exc_type, exc_value, traceback)
+        finally:
+            self.close()
+
 def utc(): return datetime.now(timezone.utc).isoformat()
 def root():
     path=Path(os.getenv('WORLDTRACE_DATA_DIR','runtime')).resolve();path.mkdir(parents=True,exist_ok=True);return path
 
 def connect():
-    conn=sqlite3.connect(root()/'worldtrace.sqlite3',check_same_thread=False, timeout=15)
+    conn=sqlite3.connect(root()/'worldtrace.sqlite3',check_same_thread=False, timeout=15, factory=ClosingConnection)
     conn.row_factory=sqlite3.Row
     conn.execute('PRAGMA journal_mode=WAL')
     conn.execute('CREATE TABLE IF NOT EXISTS missions(id TEXT PRIMARY KEY, goal TEXT NOT NULL, status TEXT NOT NULL, created TEXT NOT NULL, updated TEXT NOT NULL, mode TEXT NOT NULL, error TEXT DEFAULT "")')
