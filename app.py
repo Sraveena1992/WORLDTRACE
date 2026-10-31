@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException, Header, File, UploadFile, Form
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from worldtrace import agent,engine,storage,tools,samples,delivery,uploads,multifile,unified_records,sandbox_recovery
+from worldtrace import agent,engine,storage,tools,samples,delivery,uploads,multifile,unified_records,sandbox_recovery,public_demo
 
 app=FastAPI(title='WORLDTRACE',version='0.1.0',description='Verifiable local workflow prototype with optional actual Meta-model orchestration')
 STATIC=Path(__file__).parent/'static'
@@ -261,3 +261,26 @@ def execute_approved_demo_correction(mission_id:str, req:DemoCorrectionIn,
     try:return sandbox_recovery.execute(mission_id,req.action_index)
     except ValueError as exc:
         raise HTTPException(404 if 'Mission not found' in str(exc) else 409,str(exc)) from exc
+
+@app.post('/api/public-demo/start',status_code=201)
+def start_public_guided_demo():
+    """Synthetic-only, bounded, short-lived and zero-secret demonstration."""
+    try:return public_demo.start()
+    except RuntimeError as exc:raise HTTPException(429,str(exc)) from exc
+
+@app.get('/api/public-demo/{demo_id}')
+def get_public_guided_demo(demo_id:str):
+    try:return public_demo.get(demo_id)
+    except ValueError as exc:raise HTTPException(404,str(exc)) from exc
+
+@app.post('/api/public-demo/{demo_id}/approve')
+def approve_public_guided_demo(demo_id:str):
+    try:return public_demo.approve(demo_id)
+    except ValueError as exc:
+        raise HTTPException(404 if "expired" in str(exc) or "not found" in str(exc) else 409,str(exc)) from exc
+
+@app.post('/api/public-demo/{demo_id}/execute')
+def execute_public_guided_demo(demo_id:str):
+    try:return public_demo.execute(demo_id)
+    except ValueError as exc:
+        raise HTTPException(404 if "expired" in str(exc) or "not found" in str(exc) else 409,str(exc)) from exc
