@@ -71,9 +71,35 @@ def run(goal, files, model_plan=None):
     verdict = "REVIEW_NEEDED" if findings or any(not check["matched"] for check in checks) else "LOCAL_CHECKS_PASSED"
     _event(events, "Verification Agent", "compare_evidence_and_checks",
            {"verdict": verdict, "cross_checks": checks, "findings": len(findings)})
+    # Construct a replayable but isolated demo state. Persist only salted digests
+    # of actual CSV rows, never raw uploaded CSV bytes or business values.
+    demo_repair = None
+    if "source_csv" in files and "target_csv" in files:
+        source = uploads._csv_rows(files["source_csv"][1])
+        target = uploads._csv_rows(files["target_csv"][1])
+        import secrets
+        salt = secrets.token_hex(16)
+        digest_id = lambda key: hashlib.sha256((salt + ":id:" + key).encode()).hexdigest()
+        digest_row = lambda row: hashlib.sha256((salt + ":row:" + json.dumps(row,sort_keys=True,ensure_ascii=False)).encode()).hexdigest()
+        demo_repair = {
+            "kind": "isolated_sqlite_csv_reconciliation",
+            "source": {digest_id(k): digest_row(v) for k,v in source.items()},
+            "target": {digest_id(k): digest_row(v) for k,v in target.items()},
+            "missing_record_count": len(source.keys()-target.keys()),
+            "source_sha256": hashlib.sha256(files["source_csv"][1]).hexdigest(),
+            "target_sha256": hashlib.sha256(files["target_csv"][1]).hexdigest(),
+            "scope": "isolated demo database only; hashed evidence, not original business records"
+        }
     actions = [{"file": item["file_name"], "tool": item["tool"],
                 "next_action": "Human must investigate, authorize changes, then rerun verification.",
                 "executed": False} for item in findings]
+    if demo_repair and demo_repair["missing_record_count"] > 0:
+        actions.insert(0,{
+            "file": files["target_csv"][0], "tool": "etl_compare",
+            "type": "sandbox_csv_reconcile",
+            "next_action": "After explicit approval, copy missing hashed records into an isolated demo SQLite database; verify against the hashed source snapshot. Production CSV and external systems remain unchanged.",
+            "executed": False
+        })
     _event(events, "Builder Agent", "prepare_review_actions",
            {"proposals": len(actions), "executed": 0})
     report_lines = ["# WORLDTRACE Multi-File Evidence Report", "",
@@ -96,6 +122,7 @@ def run(goal, files, model_plan=None):
            {"report_sha256": digest, "bytes": len(report.encode())})
     return {"mode": "meta_planned_multi_file" if model_plan else "deterministic_multi_file",
             "model_plan": model_plan, "status": verdict,
+            "demo_repair": demo_repair,
             "goal": goal.strip(), "observations": observations,
             "cross_checks": checks, "proposed_actions": actions, "trace": events,
             "report_markdown": report, "report_sha256": digest,
