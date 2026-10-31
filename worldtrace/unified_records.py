@@ -8,7 +8,7 @@ import json
 import re
 import sqlite3
 from uuid import uuid4
-from . import storage
+from . import storage, sandbox_recovery
 
 ID_PATTERN=re.compile(r"UM-[0-9A-F]{16}$")
 
@@ -35,6 +35,7 @@ def record(result):
         conn.execute("INSERT INTO unified_records VALUES(?,?,?,?,?,?,?)",
             (mid,created,result["goal"],result["status"],
              json.dumps(payload,ensure_ascii=False),result["report_markdown"],result["report_sha256"]))
+        sandbox_recovery.initialize(conn,mid,result)
     return {"id":mid,"created":created,"stored":True}
 
 def _check_id(mid):
@@ -54,7 +55,7 @@ def get(mid):
         result=json.loads(row["result_json"])
         return {"id":mid,"created":row["created"],**result,
                 "report_markdown":row["report"],"report_sha256":row["report_sha256"],
-                "decisions":decisions(mid)}
+                "decisions":decisions(mid), "sandbox_executions":sandbox_recovery.history(mid)}
 
 def decisions(mid):
     _check_id(mid)
