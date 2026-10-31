@@ -359,3 +359,39 @@ $('loadSavedAgentMissions').onclick=async()=>{
   $('agentRoleDetail').textContent='Could not load saved mission evidence: '+e.message;
  }
 };
+
+async function loadUnifiedAuditList(){
+ const token=privateToken();if(!token)return;
+ const select=$('auditUnifiedMission');
+ try{
+  const rows=await api('/api/unified-missions',{headers:{'X-WORLDTRACE-TOKEN':token}});
+  select.innerHTML='<option value="">Choose saved unified mission</option>'+rows.map(r=>
+   '<option value="'+safe(r.id)+'">'+safe(r.id+' · '+r.status.replaceAll('_',' '))+'</option>').join('');
+  if(app.selectedUnified?.startsWith('UM-')&&rows.some(r=>r.id===app.selectedUnified)){
+   select.value=app.selectedUnified;
+   await showUnifiedAudit(app.selectedUnified,token);
+  }else{
+   $('auditUnifiedResult').textContent=rows.length?'Select a saved mission to inspect its evidence.':'No saved unified missions found.';
+  }
+ }catch(e){$('auditUnifiedResult').textContent='Cannot load private evidence: '+e.message}
+}
+async function showUnifiedAudit(id,providedToken){
+ if(!id)return;
+ const token=providedToken||privateToken();if(!token)return;
+ try{
+  const data=await api('/api/unified-missions/'+encodeURIComponent(id),{
+    headers:{'X-WORLDTRACE-TOKEN':token}});
+  const verified=data.trace_verified&&data.report_verified;
+  const verdict=verified?'STORED TRACE & REPORT HASHES VALID':'INTEGRITY CHECK FAILED';
+  const trace=(data.trace||[]).map(e=>'<div class="ledger-row"><div><strong>'+safe(e.role)+'</strong><div class="muted">'+safe(e.action.replaceAll('_',' '))+'</div></div><div class="ledger-payload">'+safe(JSON.stringify(e.details))+'<div class="muted">SHA-256 '+safe(e.hash)+'</div></div></div>').join('');
+  const reviews=(data.decisions||[]).map(d=>'<div class="ledger-row"><strong>Human '+safe(d.decision.replaceAll('_',' '))+'</strong><div class="ledger-payload">Action '+safe(d.action_index)+' · '+safe(d.reviewer)+' · '+safe(d.created)+'</div></div>').join('');
+  const executions=(data.sandbox_executions||[]).map(x=>'<div class="ledger-row"><strong>Sandbox verification · '+(x.verified?'PASS':'FAIL')+'</strong><div class="ledger-payload">Before '+safe(x.before_count)+' → After '+safe(x.after_count)+' · Added '+safe(x.added_records)+' hashed records · Before SHA '+safe(x.before_digest)+' · After SHA '+safe(x.after_digest)+'</div></div>').join('');
+  $('auditUnifiedResult').innerHTML='<div class="ledger-verify '+(verified?'':'bad')+'">'+safe(verdict)+'</div>'+
+   '<p>'+safe(data.id)+' · '+safe(data.goal)+'</p>'+trace+
+   '<h3>Human review decisions</h3>'+(reviews||'<p>No human decisions recorded.</p>')+
+   '<h3>Approved sandbox execution</h3>'+(executions||'<p>No approved corrective execution yet.</p>')+
+   '<p class="muted">Local SQLite, not independently anchored. Does not prove real-world change; no production write.</p>';
+ }catch(e){$('auditUnifiedResult').textContent='Unable to inspect saved evidence: '+e.message}
+}
+$('loadUnifiedAudit').onclick=loadUnifiedAuditList;
+$('auditUnifiedMission').onchange=e=>showUnifiedAudit(e.target.value);
