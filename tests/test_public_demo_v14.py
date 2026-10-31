@@ -49,4 +49,4 @@ def test_public_browser_interactions_are_real():
         assert snippet in js
     assert 'id="startPublicDemo"' in html
     assert 'id="publicDemoOutput"' in html
-    assert '/assets/app.js?v=23' in html
+    assert '/assets/app.js?v=24' in html
