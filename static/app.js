@@ -4,7 +4,13 @@ function safe(t){return String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 async function api(path,opt){const r=await fetch(path,opt);let data;try{data=await r.json()}catch{data={detail:`HTTP ${r.status}`}}if(!r.ok)throw Error(typeof data.detail==='string'?data.detail:`HTTP ${r.status}`);return data}
 function route(name){document.querySelectorAll('.page').forEach(e=>e.classList.toggle('shown',e.id===name));document.querySelectorAll('[data-route]').forEach(e=>e.classList.toggle('active',e.dataset.route===name));$('crumb').textContent={overview:'MISSION CONTROL',agents:'AGENT WORKFORCE',tools:'ENTERPRISE TOOLS',audit:'EVIDENCE LEDGER',reviews:'HUMAN REVIEW',workspace:'SPECIALIST WORKSPACE',deliverables:'OUTCOME STUDIO',multi:'MULTI-FILE MISSION'}[name];window.scrollTo({top:0,behavior:'smooth'});if(name==='reviews')renderReviewQueue();if(name==='agents')renderAgentWorkforce();if(name==='audit'&&app.active){$('auditMission').value=app.active;showAudit(app.active)}}
 for(const b of document.querySelectorAll('[data-route]'))b.addEventListener('click',()=>route(b.dataset.route));
-$('topNewMission').onclick=()=>route('multi');$('openUnifiedMission').onclick=()=>route('multi');$('jumpReview').onclick=()=>route('reviews');$('refreshReviews').onclick=()=>refresh();$('focusGoal').onclick=()=>route('multi');$('jumpWorkflow').onclick=()=>route('tools');$('refresh').onclick=refresh;
+$('topNewMission').onclick=()=>route('multi');$('openUnifiedMission').onclick=()=>route('multi');$('jumpReview').onclick=()=>route('reviews');$('refreshReviews').onclick=()=>refresh();$('focusGoal').onclick=()=>route('multi');$('jumpWorkflow').onclick=()=>route('tools');$('refresh').onclick=async()=>{
+ const status=$('fixtureRefreshStatus');
+ status.textContent='Reloading legacy sample history…';
+ await refresh();
+ status.textContent='Fixture history refreshed. '+app.missions.length+
+  ' WT- mission(s) currently recorded. This does not load public demo or UM- mission records.';
+};
 function setMode(mode){app.mode=mode;$('modeLocal').classList.toggle('selected',mode==='local');$('modeModel').classList.toggle('selected',mode==='model');$('modeInfo').innerHTML=mode==='local'?'Local mode uses deterministic keyword routing on synthetic fixtures. It is <strong>not</strong> AI-generated planning.':'Model mode calls your configured Meta-compatible endpoint to select tools and create the mission plan. It requires real working credentials.'}
 $('modeLocal').onclick=()=>setMode('local');$('modeModel').onclick=()=>setMode('model');
 const toolAgents={'pdf_inspect':['◫','Document Analyst','Reads PDF and checks factual fields against defined assertions.'],'email_inspect':['✉','Communications Analyst','Validates real local email message content and expected signals.'],'network_inspect':['⌁','Network Investigator','Inspects a supplied HAR capture and identifies failed requests.'],'etl_compare':['⇄','Data Integrity Agent','Compares source and target records and flags divergences.'],'database_check':['▥','Database Auditor','Runs bounded read-only assertions on an approved sample database.'],'api_virtualize':['⟐','API Simulator','Validates API contract expectations using local mock responses.'],'performance_probe':['◷','Performance Engineer','Executes a bounded, repeatable in-process latency check.'],'middleware_test':['⊞','Integration Tester','Replays fixture message IDs and checks for duplicates.'],'mainframe_contract':['▤','Legacy Systems Analyst','Validates fixed-width record contracts; no actual mainframe access.']};
@@ -228,7 +234,7 @@ function renderAgentWorkforce(){
  const mission=app.unifiedMissions.find(m=>m.id===sel.value);
  $('agentMissionSummary').innerHTML=mission?
  '<strong>'+safe(mission.goal)+'</strong><p>'+mission.data.observations.length+' analyzed file roles · '+mission.data.proposed_actions.length+' manual follow-ups · '+safe(mission.data.status.replaceAll('_',' '))+'</p><button type="button" class="tiny-btn" id="agentToMission">Review mission outcome</button>':
- 'No unified mission selected. Go to Mission Control and upload files to start a real execution.';
+ 'No mission selected. To try all six responsibility views, click “Run public supplier demo — no key needed” above, then start the demo. You can also load private UM- missions with your operator token.';
  if(mission)$('agentToMission').onclick=()=>{route('multi');$('multiResults').scrollIntoView({behavior:'smooth'})};
  $('agentGrid').innerHTML=RESPONSIBILITIES.map(([title,description,event])=>{
   const matched=mission?mission.data.trace.filter(e=>e.action===event):[];
@@ -250,6 +256,10 @@ function renderAgentWorkforce(){
  });
 }
 $('agentMissionSelect').onchange=e=>{app.selectedUnified=e.target.value;renderAgentWorkforce()};
+$('agentStartDemo').onclick=()=>{
+ route('multi');
+ $('startPublicDemo').scrollIntoView({behavior:'smooth',block:'center'});
+};
 
 async function loadUnifiedHistory(providedToken){
  const err=$('multiError');
@@ -366,7 +376,9 @@ for(const [role,id] of multiFields){
 }
 
 $('loadSavedAgentMissions').onclick=async()=>{
- const token=privateToken();if(!token)return;
+ $('agentLoadStatus').textContent='Private UM- history requires the WORLDTRACE operator token; public demos do not.';
+ const token=privateToken();
+ if(!token){$('agentLoadStatus').textContent='Private history not loaded (no operator token). To try Agent Workforce without a key, click Run public supplier demo.';return;}
  try{
   const rows=await api('/api/unified-missions',{headers:{'X-WORLDTRACE-TOKEN':token}});
   const complete=await Promise.all(rows.slice(0,10).map(r=>api('/api/unified-missions/'+encodeURIComponent(r.id),{
@@ -377,9 +389,12 @@ $('loadSavedAgentMissions').onclick=async()=>{
    }
   }
   renderAgentWorkforce();
-  $('agentRoleDetail').innerHTML='<h2>Saved missions loaded</h2><p>'+complete.length+' operator-authorized result records available. Choose a mission above, then inspect a role.</p>';
+  $('agentLoadStatus').textContent=complete.length+
+    ' private UM- mission(s) loaded. Public demos remain available in this browser tab.';
+  $('agentRoleDetail').innerHTML='<h2>Saved missions loaded</h2><p>'+complete.length+' private UM- mission records available. Choose a mission above, then inspect a role.</p>';
  }catch(e){
   if(/403|authorization|token/i.test(e.message))app.missionToken=null;
+  $('agentLoadStatus').textContent='Private mission load failed: '+e.message;
   $('agentRoleDetail').textContent='Could not load saved mission evidence: '+e.message;
  }
 };
