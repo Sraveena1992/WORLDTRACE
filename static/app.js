@@ -469,3 +469,67 @@ async function importLatestUnifiedEvidence(){
   route('deliverables');
  }catch(e){$('outcomeImportedStatus').textContent='Could not load evidence: '+e.message;route('deliverables')}
 }
+
+
+async function runPublicDemoOperation(url){
+ const res=await fetch(url,{method:'POST'});
+ const data=await res.json().catch(()=>({detail:'Invalid demo response'}));
+ if(!res.ok)throw Error(data.detail||'HTTP '+res.status);
+ return data;
+}
+function renderPublicGuidedDemo(data){
+ const id='PUBLIC-DEMO-'+data.demo_id.slice(0,8);
+ app.publicDemoSession=data;
+ const existing=app.unifiedMissions.find(m=>m.id===id);
+ const item={id,goal:data.instruction,created:new Date().toISOString(),
+             data:{...data,goal:data.instruction,status:data.status}};
+ if(existing)existing.data=item.data;else app.unifiedMissions.unshift(item);
+ app.selectedUnified=id;renderAgentWorkforce();
+ const verified=data.status==='VERIFIED_SANDBOX';
+ const step=data.status==='REVIEW_NEEDED'?'<button id="approvePublicDemo" class="run-btn secondary-run" type="button">✓ Approve isolated demo correction →</button>':
+  data.status==='APPROVED_SANDBOX_ONLY'?'<button id="executePublicDemo" class="run-btn secondary-run" type="button">▶ Execute approved SQLite correction & re-verify →</button>':
+  '<div class="sandbox-verified"><strong>VERIFIED — ISOLATED DEMO ONLY</strong><p>Actual SQLite target changed from '+data.initial_target_rows+' to '+data.current_target_rows+' hashed records. '+data.rows_added+' inserted; source and target hashes now match.</p><small>Before '+safe(data.before_sha256)+' · After '+safe(data.after_sha256)+'</small></div><button id="downloadPublicReceipt" type="button" class="run-btn secondary-run">↓ Download real demo resolution receipt</button>';
+ const trace=data.trace.map(e=>'<div class="public-trace-row"><strong>'+safe(e.role)+'</strong><span>'+safe(e.action.replaceAll('_',' '))+'</span><small>'+safe(e.hash.slice(0,16))+'…</small></div>').join('');
+ $('publicDemoOutput').innerHTML='<div class="public-demo-facts"><div><small>SUPPLIED (SYNTHETIC) SOURCE</small><strong>'+data.source_rows+'</strong></div><div><small>INITIAL TARGET</small><strong>'+data.initial_target_rows+'</strong></div><div><small>MISSING RECORD</small><strong>'+safe(data.missing_ids.join(', '))+'</strong></div></div>'+
+ '<div class="human-result"><div class="human-result-head"><strong>Mission result</strong><span class="run-status '+(verified?'passed':'finding')+'">'+safe(data.status.replaceAll('_',' '))+'</span></div>'+
+ '<p>'+safe(data.instruction)+'</p><p>'+safe(verified?'After-state rechecked against the expected source hashes.':'The CSV parser found a missing supplier record. A correction is proposed but has not been applied until the separate approval and execution steps.')+'</p>'+
+ '<div class="human-result-note">No Meta inference · Synthetic inputs only · No raw customer files · No external writes</div></div>'+
+ step+'<button type="button" class="tiny-btn" id="publicDemoAgents">◉ Inspect real stage evidence in Agent Workforce</button>'+
+ '<details class="public-demo-trace"><summary>View '+data.trace.length+' recorded execution stages · SHA chain '+(data.trace_verified?'VALID':'INVALID')+'</summary>'+trace+'</details>';
+ $('publicDemoAgents').onclick=()=>route('agents');
+ if($('approvePublicDemo'))$('approvePublicDemo').onclick=async()=>{
+  const btn=$('approvePublicDemo');btn.disabled=true;btn.textContent='Recording demo approval…';
+  try{renderPublicGuidedDemo(await runPublicDemoOperation('/api/public-demo/'+encodeURIComponent(data.demo_id)+'/approve'))}
+  catch(e){btn.disabled=false;btn.textContent='Try approval again';$('publicDemoOutput').insertAdjacentHTML('afterbegin','<p class="error">Approval failed: '+safe(e.message)+'</p>')}
+ };
+ if($('executePublicDemo'))$('executePublicDemo').onclick=async()=>{
+  if(!window.confirm('Execute the approved correction ONLY on this short-lived synthetic in-memory SQLite demo? No production files will be touched.'))return;
+  const btn=$('executePublicDemo');btn.disabled=true;btn.textContent='Executing sandbox repair and re-querying state…';
+  try{renderPublicGuidedDemo(await runPublicDemoOperation('/api/public-demo/'+encodeURIComponent(data.demo_id)+'/execute'))}
+  catch(e){btn.disabled=false;btn.textContent='Retry sandbox execution';$('publicDemoOutput').insertAdjacentHTML('afterbegin','<p class="error">Demo execution failed: '+safe(e.message)+'</p>')}
+ };
+ if($('downloadPublicReceipt'))$('downloadPublicReceipt').onclick=()=>{
+  const lines=['# WORLDTRACE — Public Guided Demo Resolution Receipt','',
+    'Scenario: synthetic supplier onboarding','Mission: '+data.instruction,
+    'Approved: '+data.approved,'Verified in isolated in-memory SQLite: '+data.verified,
+    'Missing supplier ID: '+data.missing_ids.join(', '),
+    'Source records: '+data.source_rows,
+    'Target before: '+data.initial_target_rows,'Target after: '+data.current_target_rows,
+    'Hashed records added: '+data.rows_added,
+    'Before-state SHA-256: '+data.before_sha256,'After-state SHA-256: '+data.after_sha256,
+    'Audit trace hash chain valid: '+data.trace_verified,
+    'External writes: 0','Production records modified: false',
+    'No Meta model call; this is a deterministic synthetic sandbox demonstration.',
+    '','## Execution evidence'];
+  for(const e of data.trace)lines.push('- '+e.role+' / '+e.action+' / SHA '+e.hash);
+  downloadMarkdown(lines.join('\n')+'\n','WORLDTRACE-public-demo-resolution.md');
+ };
+}
+$('startPublicDemo').onclick=async()=>{
+ const button=$('startPublicDemo');button.disabled=true;button.textContent='Creating isolated demo session…';
+ try{
+  const data=await runPublicDemoOperation('/api/public-demo/start');
+  renderPublicGuidedDemo(data);
+ }catch(e){$('publicDemoOutput').innerHTML='<p class="error">Public demo unavailable: '+safe(e.message)+'</p>'}
+ finally{button.disabled=false;button.textContent='▶ Start another fresh guided demo →'}
+};
