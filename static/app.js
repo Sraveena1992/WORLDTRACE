@@ -197,8 +197,9 @@ $('multiRun').onclick=async()=>{
    app.unifiedMissions.unshift(mission);app.unifiedMissions=app.unifiedMissions.slice(0,5);app.selectedUnified=mission.id;
    renderAgentWorkforce();
    if(data.saved_mission_id)await loadUnifiedHistory(token);
-   $('multiResults').innerHTML=intro+planNote+modelReasoning+'<div class="eyebrow">INDIVIDUAL FILE RESULTS</div>'+records+'<div class="eyebrow multi-spaced">CROSS-FILE CHECKS</div>'+(correlations||'<p class="muted">No matching cross-file check for selected types.</p>')+'<div class="eyebrow multi-spaced">EXECUTION TRACE</div>'+data.trace.map(e=>'<div class="outcome-stage"><span class="step-number">'+safe(e.role.split(' ')[0])+'</span><div><b>'+safe(e.role)+'</b><p>'+safe(e.action.replaceAll('_',' '))+'</p></div></div>').join('')+'<div class="multi-actions"><button type="button" class="run-btn secondary-run" id="downloadMulti">↓ Download verified Markdown report</button><button type="button" class="tiny-btn" id="inspectMissionAgents">◉ Inspect Agent Workforce →</button>'+(data.saved_mission_id?'<button type="button" class="run-btn secondary-run" id="reviewMissionNow">✓ Review and resolve in demo →</button>':'')+'</div>';
+   $('multiResults').innerHTML=intro+planNote+modelReasoning+'<div class="eyebrow">INDIVIDUAL FILE RESULTS</div>'+records+'<div class="eyebrow multi-spaced">CROSS-FILE CHECKS</div>'+(correlations||'<p class="muted">No matching cross-file check for selected types.</p>')+'<div class="eyebrow multi-spaced">EXECUTION TRACE</div>'+data.trace.map(e=>'<div class="outcome-stage"><span class="step-number">'+safe(e.role.split(' ')[0])+'</span><div><b>'+safe(e.role)+'</b><p>'+safe(e.action.replaceAll('_',' '))+'</p></div></div>').join('')+'<div class="multi-actions"><button type="button" class="run-btn secondary-run" id="downloadMulti">↓ Download verified Markdown report</button><button type="button" class="tiny-btn" id="inspectMissionAgents">◉ Inspect Agent Workforce →</button><button type="button" class="tiny-btn" id="prepareOutcome">✦ Prepare final delivery package →</button>'+(data.saved_mission_id?'<button type="button" class="run-btn secondary-run" id="reviewMissionNow">✓ Review and resolve in demo →</button>':'')+'</div>';
    $('inspectMissionAgents').onclick=()=>route('agents');
+   $('prepareOutcome').onclick=()=>importLatestUnifiedEvidence();
    if(data.saved_mission_id)$('reviewMissionNow').onclick=()=>{route('reviews');loadUnifiedReviewQueue(token,data.saved_mission_id)};
    $('downloadMulti').onclick=()=>{
      const blob=new Blob([data.report_markdown],{type:'text/markdown;charset=utf-8'});
@@ -409,3 +410,53 @@ async function showUnifiedAudit(id,providedToken){
 }
 $('loadUnifiedAudit').onclick=loadUnifiedAuditList;
 $('auditUnifiedMission').onchange=e=>showUnifiedAudit(e.target.value);
+
+$('loadMissionIntoOutcome').onclick=()=>importLatestUnifiedEvidence();
+async function importLatestUnifiedEvidence(){
+ let entry=app.unifiedMissions.find(m=>m.id===app.selectedUnified)||app.unifiedMissions[0];
+ try{
+  if(!entry){
+   const token=privateToken();if(!token)return;
+   const rows=await api('/api/unified-missions',{headers:{'X-WORLDTRACE-TOKEN':token}});
+   if(!rows.length){$('outcomeImportedStatus').textContent='No unified mission yet. Start the guided demo in Mission Control first.';route('deliverables');return}
+   const data=await api('/api/unified-missions/'+encodeURIComponent(rows[0].id),{
+     headers:{'X-WORLDTRACE-TOKEN':token}});
+   entry={id:data.id,goal:data.goal,created:data.created,data};
+   app.unifiedMissions.unshift(entry);
+  }
+  // Refresh from protected storage so approvals and demo executions are included.
+  let data=entry.data;
+  if(entry.id.startsWith('UM-')){
+   const token=privateToken();if(!token)return;
+   data=await api('/api/unified-missions/'+encodeURIComponent(entry.id),{
+     headers:{'X-WORLDTRACE-TOKEN':token}});
+   entry.data=data;
+  }
+  const lines=['Mission: '+entry.id,'Instruction: '+entry.goal,'Result: '+data.status,
+    'Data mode: '+data.mode,'Observed uploaded file checks:'];
+  for(const item of data.observations||[]){
+   lines.push('- '+item.file_name+' ('+item.tool+'): '+item.status+'; '+summarizeObservation(item)+
+    '; SHA-256 '+item.sha256);
+  }
+  for(const check of data.cross_checks||[]){
+   lines.push('Cross-file check: '+check.name+' · '+(check.matched?'MATCH':'MISMATCH'));
+  }
+  for(const decision of data.decisions||[]){
+   lines.push('Human review: '+decision.decision+' on action '+decision.action_index);
+  }
+  for(const run of data.sandbox_executions||[]){
+   lines.push('ISOLATED DEMO FIX (no production change): '+run.added_records+' hashed rows applied; before '+run.before_count+
+    ' → after '+run.after_count+'; verification '+(run.verified?'passed':'failed')+
+    '; before digest '+run.before_digest+'; after digest '+run.after_digest);
+  }
+  lines.push('Audit trace verified: '+String(data.trace_verified??'not reverified in tab'));
+  lines.push('Report digest verified: '+String(data.report_verified??'not reverified in tab'));
+  lines.push('LIMITATIONS: local inspection only; demo repair affects isolated SQLite, not customer systems.');
+  $('outcomeGoal').value=('Produce a source-linked resolution and verification package: '+entry.goal).slice(0,1500);
+  $('outcomeDomain').value=(data.observations||[]).some(x=>x.tool==='etl_compare')?'data_quality':
+    (data.observations||[]).some(x=>x.tool==='network_inspect')?'api_incident':'supplier_onboarding';
+  $('outcomeEvidence').value=lines.join('\n').slice(0,12000);
+  $('outcomeImportedStatus').textContent='Imported mission '+entry.id+' into delivery request. Review evidence, then press Produce verified delivery package. No new real-world actions will execute.';
+  route('deliverables');
+ }catch(e){$('outcomeImportedStatus').textContent='Could not load evidence: '+e.message;route('deliverables')}
+}
