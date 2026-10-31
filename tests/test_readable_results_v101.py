@@ -26,4 +26,4 @@ def test_results_have_plain_language_noninteractive_status():
     assert "evidenceCard(data.tool,result,'upload'" in js
     assert "evidenceCard(run.tool,result,'fixture'" in js
     assert ".human-result-head" in css
-    assert '/assets/app.js?v=23' in html
+    assert '/assets/app.js?v=24' in html
