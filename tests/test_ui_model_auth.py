@@ -15,4 +15,4 @@ def test_private_mission_token_not_persisted_in_browser_storage():
 
 def test_dashboard_does_not_falsely_claim_inference_ready():
     assert 'READY<span class="metric-unit">API</span>' not in JS
-    assert "Endpoint configured; not yet proven by a call" in JS
+    assert "Credentials configured; inference NOT yet verified" in JS
