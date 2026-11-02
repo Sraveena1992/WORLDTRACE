@@ -263,10 +263,11 @@ def execute_approved_demo_correction(mission_id:str, req:DemoCorrectionIn,
         raise HTTPException(404 if 'Mission not found' in str(exc) else 409,str(exc)) from exc
 
 @app.post('/api/public-demo/start',status_code=201)
-def start_public_guided_demo():
-    """Synthetic-only, bounded, short-lived and zero-secret demonstration."""
-    try:return public_demo.start()
+def start_public_guided_demo(scenario: str = "missing_only"):
+    """Synthetic-only demo: successful correction or fail-closed conflict challenge."""
+    try:return public_demo.start(scenario=scenario)
     except RuntimeError as exc:raise HTTPException(429,str(exc)) from exc
+    except ValueError as exc:raise HTTPException(422,str(exc)) from exc
 
 @app.get('/api/public-demo/{demo_id}')
 def get_public_guided_demo(demo_id:str):
