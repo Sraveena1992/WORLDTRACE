@@ -506,6 +506,14 @@ function renderPublicGuidedDemo(data){
  const step=blocked?'<div class="sandbox-blocked"><strong>SAFE REFUSAL — NO CHANGE APPLIED</strong><p>'+safe(data.block_reason||'Conflicting input detected')+'</p><p>Target remains '+safe(data.current_target_rows)+' records; 0 records inserted. The audit records why the action was refused.</p></div><button id="downloadBlockedReceipt" type="button" class="tiny-btn">↓ Download refusal evidence</button>':data.status==='REVIEW_NEEDED'?'<button id="approvePublicDemo" class="run-btn secondary-run" type="button">✓ Approve isolated demo correction →</button>':
   data.status==='APPROVED_SANDBOX_ONLY'?'<button id="executePublicDemo" class="run-btn secondary-run" type="button">▶ Execute approved SQLite correction & re-verify →</button>':
   '<div class="sandbox-verified"><strong>VERIFIED — ISOLATED DEMO ONLY</strong><p>Actual SQLite target changed from '+data.initial_target_rows+' to '+data.current_target_rows+' hashed records. '+data.rows_added+' inserted; source and target hashes now match.</p><small>Before '+safe(data.before_sha256)+' · After '+safe(data.after_sha256)+'</small></div><button id="downloadPublicReceipt" type="button" class="run-btn secondary-run">↓ Download real demo resolution receipt</button>';
+ const roles=data.evidence_roles||[];
+ const crossChecks=data.cross_checks||[];
+ const evidencePanel=roles.length>2?
+ '<div class="human-result"><strong>MULTI-SOURCE INVESTIGATION — SYNTHETIC</strong>'+
+ '<p>Actual bounded parsers read '+safe(roles.join(', '))+'. CSV discrepancy and observed API failures are separate findings.</p>'+
+ crossChecks.map(c=>'<p>Cross-check '+safe(c.name)+': '+safe(c.matched?'CONSISTENT':'INCONSISTENT')+
+ ' · '+safe(c.basis||'')+'</p>').join('')+
+ '<p><strong>Scope:</strong> The permitted database-only correction can verify CSV state; it does not resolve or repair the observed HTTP 503 or external API.</p></div>':'';
  const meta=data.model_assessment;
  const metaPanel=meta?
  '<div class="human-result"><strong>LIVE META EVIDENCE REASONING — ADVISORY</strong>'+
@@ -520,7 +528,7 @@ function renderPublicGuidedDemo(data){
  '<div class="human-result"><div class="human-result-head"><strong>Mission result</strong><span class="run-status '+(verified?'passed':'finding')+'">'+safe(data.status.replaceAll('_',' '))+'</span></div>'+
  '<p>'+safe(data.instruction)+'</p><p>'+safe(blocked?'Safety gate rejected the approved correction because a pre-existing supplier value conflicts with the source. No database change was applied.':verified?'After-state rechecked against the expected source hashes.':'The CSV parser found a missing supplier record. A correction is proposed but has not been applied until the separate approval and execution steps.')+'</p>'+
  '<div class="human-result-note">'+(meta?'Real Meta analysis used for advisory hypotheses · ':'No Meta inference yet · ')+'Synthetic inputs only · No raw customer files · No external writes</div></div>'+
- step+metaPanel+'<button type="button" class="tiny-btn" id="publicDemoAgents">◉ Inspect real stage evidence in Agent Workforce</button>'+
+ step+evidencePanel+metaPanel+'<button type="button" class="tiny-btn" id="publicDemoAgents">◉ Inspect real stage evidence in Agent Workforce</button>'+
  '<details class="public-demo-trace"><summary>View '+data.trace.length+' recorded execution stages · SHA chain '+(data.trace_verified?'VALID':'INVALID')+'</summary>'+trace+'</details>';
  if($('assessPublicMeta'))$('assessPublicMeta').onclick=async()=>{
   const token=privateToken();if(!token)return;
@@ -569,6 +577,9 @@ function renderPublicGuidedDemo(data){
     'Scenario: synthetic supplier onboarding','Mission: '+data.instruction,
     'Approved: '+data.approved,'Verified in isolated in-memory SQLite: '+data.verified,
     'Missing supplier ID: '+data.missing_ids.join(', '),
+    'Evidence roles: '+(data.evidence_roles||[]).join(', '),
+    'Cross-file checks: '+JSON.stringify(data.cross_checks||[]),
+    'Outstanding issue: the API failure is not repaired in the isolated SQLite correction.',
     'Source records: '+data.source_rows,
     'Target before: '+data.initial_target_rows,'Target after: '+data.current_target_rows,
     'Hashed records added: '+data.rows_added,
@@ -597,4 +608,13 @@ $('startPublicChallenge').onclick=async()=>{
   renderPublicGuidedDemo(data);
  }catch(e){$('publicDemoOutput').innerHTML='<p class="error">Safety challenge unavailable: '+safe(e.message)+'</p>'}
  finally{btn.disabled=false;btn.textContent='⚠ Run another safety challenge →'}
+};
+
+$('startMultiSourceDemo').onclick=async()=>{
+ const btn=$('startMultiSourceDemo');btn.disabled=true;btn.textContent='Analyzing synthetic CSV, HAR and API contract…';
+ try{
+  const result=await runPublicDemoOperation('/api/public-demo/start?scenario=multi_source_incident');
+  renderPublicGuidedDemo(result);
+ }catch(e){$('publicDemoOutput').innerHTML='<p class="error">Multi-source demo unavailable: '+safe(e.message)+'</p>'}
+ finally{btn.disabled=false;btn.textContent='✦ Run another multi-source incident →'}
 };
