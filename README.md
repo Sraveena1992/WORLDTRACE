@@ -43,6 +43,14 @@ Open the [public WORLDTRACE prototype](https://worldtrace.onrender.com/). Click 
 
 **No API key, customer uploads, external service, Meta model call or production database connection is used.** Sessions expire after 20 minutes; the server bounds active sessions to prevent unbounded demo storage. This public route is **not** full user authentication or permission to execute on an external system. The separate private Mission Control upload/approval workflow still requires an operator token.
 
+## 🛡️ Adversarial safety proof (judge challenge)
+
+Next to the successful no-key supplier resolution, click **Adversarial challenge — prove unsafe changes are blocked**. The application builds a separate, synthetic session with a missing row **and a conflicting value on an existing supplier**. The operator can review and approve the proposed change, but the execution-time safety gate refuses the correction because blindly inserting a missing row would not resolve the inconsistent dataset.
+
+The result is **BLOCKED_UNSAFE_CONFLICT**, unchanged SQLite row count, zero inserted records, a recorded Security Agent refusal event, and a valid hash-chained audit trace. Download the refusal evidence separately. No external writes or real customer data are involved.
+
+This is deliberately **deterministic safety validation**, not a claim that a Meta model discovered the conflict. It proves the operational principle that human approval alone does not override post-approval execution policies.
+
 ## ▶️ Reproduce the full demo in one command
 
 Requires Python 3.11+, including Windows PowerShell.
