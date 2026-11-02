@@ -505,13 +505,36 @@ function renderPublicGuidedDemo(data){
  const step=blocked?'<div class="sandbox-blocked"><strong>SAFE REFUSAL — NO CHANGE APPLIED</strong><p>'+safe(data.block_reason||'Conflicting input detected')+'</p><p>Target remains '+safe(data.current_target_rows)+' records; 0 records inserted. The audit records why the action was refused.</p></div><button id="downloadBlockedReceipt" type="button" class="tiny-btn">↓ Download refusal evidence</button>':data.status==='REVIEW_NEEDED'?'<button id="approvePublicDemo" class="run-btn secondary-run" type="button">✓ Approve isolated demo correction →</button>':
   data.status==='APPROVED_SANDBOX_ONLY'?'<button id="executePublicDemo" class="run-btn secondary-run" type="button">▶ Execute approved SQLite correction & re-verify →</button>':
   '<div class="sandbox-verified"><strong>VERIFIED — ISOLATED DEMO ONLY</strong><p>Actual SQLite target changed from '+data.initial_target_rows+' to '+data.current_target_rows+' hashed records. '+data.rows_added+' inserted; source and target hashes now match.</p><small>Before '+safe(data.before_sha256)+' · After '+safe(data.after_sha256)+'</small></div><button id="downloadPublicReceipt" type="button" class="run-btn secondary-run">↓ Download real demo resolution receipt</button>';
+ const meta=data.model_assessment;
+ const metaPanel=meta?
+ '<div class="human-result"><strong>LIVE META EVIDENCE REASONING — ADVISORY</strong>'+
+ '<p>'+safe(meta.summary)+'</p>'+meta.hypotheses.map(h=>
+ '<p><strong>Hypothesis:</strong> '+safe(h.claim)+' · '+safe(h.confidence)+' confidence · Evidence: '+safe(h.evidence_roles.join(', '))+'</p>').join('')+
+ '<p><strong>Next:</strong> '+safe(meta.next_action)+'</p>'+
+ '<small>Model: '+safe(meta.model)+' · Provider response ID: '+safe(meta.provider_response_id)+
+ ' · Synthetic aggregate findings only; not a Meta-approved correction</small></div>':
+ '<button type="button" class="tiny-btn" id="assessPublicMeta">✦ Run REAL Meta evidence assessment (operator token required, may use credits)</button>';
  const trace=data.trace.map(e=>'<div class="public-trace-row"><strong>'+safe(e.role)+'</strong><span>'+safe(e.action.replaceAll('_',' '))+'</span><small>'+safe(e.hash.slice(0,16))+'…</small></div>').join('');
  $('publicDemoOutput').innerHTML='<div class="public-demo-facts"><div><small>SUPPLIED (SYNTHETIC) SOURCE</small><strong>'+data.source_rows+'</strong></div><div><small>INITIAL TARGET</small><strong>'+data.initial_target_rows+'</strong></div><div><small>MISSING RECORD</small><strong>'+safe(data.missing_ids.join(', '))+'</strong></div></div>'+
  '<div class="human-result"><div class="human-result-head"><strong>Mission result</strong><span class="run-status '+(verified?'passed':'finding')+'">'+safe(data.status.replaceAll('_',' '))+'</span></div>'+
  '<p>'+safe(data.instruction)+'</p><p>'+safe(blocked?'Safety gate rejected the approved correction because a pre-existing supplier value conflicts with the source. No database change was applied.':verified?'After-state rechecked against the expected source hashes.':'The CSV parser found a missing supplier record. A correction is proposed but has not been applied until the separate approval and execution steps.')+'</p>'+
- '<div class="human-result-note">No Meta inference · Synthetic inputs only · No raw customer files · No external writes</div></div>'+
- step+'<button type="button" class="tiny-btn" id="publicDemoAgents">◉ Inspect real stage evidence in Agent Workforce</button>'+
+ '<div class="human-result-note">'+(meta?'Real Meta analysis used for advisory hypotheses · ':'No Meta inference yet · ')+'Synthetic inputs only · No raw customer files · No external writes</div></div>'+
+ step+metaPanel+'<button type="button" class="tiny-btn" id="publicDemoAgents">◉ Inspect real stage evidence in Agent Workforce</button>'+
  '<details class="public-demo-trace"><summary>View '+data.trace.length+' recorded execution stages · SHA chain '+(data.trace_verified?'VALID':'INVALID')+'</summary>'+trace+'</details>';
+ if($('assessPublicMeta'))$('assessPublicMeta').onclick=async()=>{
+  const token=privateToken();if(!token)return;
+  const btn=$('assessPublicMeta');btn.disabled=true;
+  btn.textContent='Requesting real Meta model reasoning…';
+  try{
+   const updated=await api('/api/public-demo/'+encodeURIComponent(data.demo_id)+'/meta-assess',{
+     method:'POST',headers:{'X-WORLDTRACE-TOKEN':token}});
+   renderPublicGuidedDemo(updated);
+  }catch(e){
+   if(/403|authorization|token/i.test(e.message))app.missionToken=null;
+   btn.disabled=false;btn.textContent='Retry Meta evidence assessment';
+   $('publicDemoOutput').insertAdjacentHTML('afterbegin','<p class="error">Real Meta inference NOT VERIFIED: '+safe(e.message)+'</p>');
+  }
+ };
  $('publicDemoAgents').onclick=()=>route('agents');
  if($('approvePublicDemo'))$('approvePublicDemo').onclick=async()=>{
   const btn=$('approvePublicDemo');btn.disabled=true;btn.textContent='Recording demo approval…';
@@ -535,7 +558,7 @@ function renderPublicGuidedDemo(data){
     'Records inserted: '+data.rows_added,
     'External writes: '+data.external_writes,
     'Trace hash chain valid: '+data.trace_verified,
-    'No Meta inference used. No external or production edits.',
+    (data.model_assessment?'Real Meta advisory assessment recorded; execution rejection was deterministic.':'No Meta inference used. No external or production edits.'),
     '','## Trace'];
    for(const e of data.trace)lines.push('- '+e.role+' / '+e.action+' / SHA '+e.hash);
    downloadMarkdown(lines.join('\n')+'\n','WORLDTRACE-safety-refusal.md');
@@ -551,7 +574,7 @@ function renderPublicGuidedDemo(data){
     'Before-state SHA-256: '+data.before_sha256,'After-state SHA-256: '+data.after_sha256,
     'Audit trace hash chain valid: '+data.trace_verified,
     'External writes: 0','Production records modified: false',
-    'No Meta model call; this is a deterministic synthetic sandbox demonstration.',
+    (data.model_assessment?'An additional REAL Meta advisory assessment was requested; sandbox action remained deterministic.':'No Meta model call; this is a deterministic synthetic sandbox demonstration.'),
     '','## Execution evidence'];
   for(const e of data.trace)lines.push('- '+e.role+' / '+e.action+' / SHA '+e.hash);
   downloadMarkdown(lines.join('\n')+'\n','WORLDTRACE-public-demo-resolution.md');
