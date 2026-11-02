@@ -9,7 +9,27 @@
 
 WORLDTRACE investigates operational exceptions from user-authorized evidence, runs allowlisted analysis tools, prepares reviewable actions, and demonstrates an **approval-gated correction with independent after-state checks in an isolated SQLite sandbox**.
 
-> **Scope declaration:** This is a working prototype, not a production deployment or an unconditional autonomous AI system. Actual Meta Muse Spark Open inference code exists, but our Baseten provider request previously returned HTTP 403; successful production model inference must be verified before it is presented in judging. Local deterministic execution is clearly distinguished from real inference.
+> **Verified scope (November 2, 2026):** This is a working prototype, not a production deployment or an unconditional autonomous AI system. A live Baseten-hosted **Muse Spark Open-1026** evidence assessment with a real provider response ID was demonstrated in the same synthetic mission as an approval-gated SQLite correction. Model hypotheses are advisory; execution safety checks are deterministic. No production customer system is changed.
+
+## Who uses WORLDTRACE, and why?
+
+**Primary buyer to validate:** supplier-onboarding, procurement-operations and integration-reliability teams at organizations operating multiple vendor data feeds.
+
+**Pain:** Analysts reconcile missing or conflicting supplier rows with contract expectations and network failures, coordinate explicit permissions, and struggle to prove whether a change actually resolved the intended state. A CSV diff alone cannot interpret a network incident, decide which actions are appropriate, or verify broader side effects.
+
+**Product wedge:** AI-assisted incident investigation on multiple evidence formats, followed by a *separate* policy/approval layer and a verifiable after-state. Pricing hypothesis: team subscription plus measured AI-assisted investigations; **no paying customers, ROI figures or production integrations are claimed**. Required production work includes durable state, identity-based authorization and scoped connectors.
+
+**Official event theme:** **Build for Your World** — focus on a concrete operations workflow, rather than a claim to fix every enterprise system.
+
+## 🧪 Three judge-ready synthetic scenarios
+
+| Case | Real executed capability | Honest boundary |
+|---|---|---|
+| Successful onboarding repair | Missing supplier A3 detected; human approves; isolated SQLite 2→3 re-verification | Synthetic only; no customer database |
+| Adversarial correction refusal | Approved change is rejected on conflicting existing supplier row | Deterministic safety policy, not independent AI worker |
+| **Multi-source integration incident** | Real local parsers reconcile source/target CSV, HAR HTTP 503 failure and API simulated-status contract; cross-check 503 corroboration | Only SQLite discrepancy can be repaired; HTTP failure remains unresolved |
+
+The third scenario is available without a token. **Optional authorized Muse Spark Open reasoning** on the same evidence produces hypotheses from sanitized role/status/count summaries, not raw uploaded files. Users must explicitly request this inference; it can consume credits. A live successful Meta advisory assessment has already been observed in the original supplier scenario, but the new multi-source flow requires fresh live verification.
 
 ## 🎯 Signature scenario: a supplier onboarding mismatch
 
@@ -122,7 +142,7 @@ WORLDTRACE_MISSION_TOKEN=<separate private operator token>
 
 **Hackathon credential scope:** The participant's Baseten acceptance email explicitly states that its issued key works only with `meta-models/muse-spark-open-1026`. This hackathon-specific model ID overrides the generic public documentation example. Render's `WORLDTRACE_MODEL_NAME` environment variable must be updated explicitly; repository defaults do not override existing Render settings. $100 offered in email does not prove the credits are visible in the selected billing organization.\n\n**Never commit keys.** The Mission Control **Test real inference connection** control sends one explicit short request that might consume credits. When the **actual model** checkbox is selected for a unified mission, WORLDTRACE asks the hosted model to propose an exact, validated file execution order; after local file processing it requests a **second real inference response** for bounded, evidence-referenced root-cause hypotheses. This sends the user instruction and selected role names, followed by *sanitized tool statuses and counts*. Raw PDFs, raw CSV rows, and extracted document excerpts are not sent through these calls.
 
-The backend rejects incomplete or unauthorized model plans and invented evidence references. On provider failure, the API returns an explicit error rather than silently pretending local rules were model reasoning. **A successful real Baseten call has not yet been verified in this deployment (HTTP 403 previously observed).** Mocked tests do not establish real provider access.
+The backend rejects incomplete or unauthorized model plans and invented evidence references. On provider failure, the API returns an explicit error rather than silently pretending local rules were model reasoning. **A live Muse Spark Open-1026 model evidence assessment with a real provider response ID was demonstrated on November 2, 2026.** This verifies advisory inference on a synthetic mission, not autonomous model execution, production availability or independent model accuracy. Mocked tests by themselves do not establish real provider access.
 
 Hosted provider reference: [Meta documentation for Muse Spark Open](https://dev.meta.ai/docs/muse-spark-open/deploy).
 
