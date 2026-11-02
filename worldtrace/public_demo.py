@@ -59,7 +59,9 @@ def _view(token,s):
         "after_sha256":_digest(json.dumps(current,sort_keys=True)) if verified else None,
         "rows_added":len(s["source"])-len(s["initial"]) if verified else 0,
         "external_writes":0,"original_csv_modified":False,
-        "scope":"Synthetic session / in-memory SQLite only. No Meta inference or production changes."}
+        "scope":("Synthetic session / in-memory SQLite only. "+
+                 ("Optional real Meta advisory inference recorded; " if s.get("model_assessment") is not None else "No Meta inference; ")+
+                 "no production changes.")}
 
 def start(scenario="missing_only"):
     if scenario not in ("missing_only","conflicting_record"):
