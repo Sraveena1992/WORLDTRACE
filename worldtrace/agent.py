@@ -46,7 +46,7 @@ def make_plan(goal, use_model):
     payload = {"model": name, "messages": [
         {"role": "system", "content": system},
         {"role": "user", "content": json.dumps({"mission": goal, "available_tools": sorted(AVAILABLE)})}
-    ], "temperature": 0.15, "max_tokens": 1300}
+    ], "temperature": 0.15, "max_tokens": 4096}
     try:
         with httpx.Client(timeout=45) as client:
             response = client.post(base + "/chat/completions", json=payload, headers={"Authorization": f"Bearer {key}"})
@@ -85,7 +85,7 @@ def make_followup_plan(goal, tasks):
               "Never claim external actions or fixes. Only inspect local synthetic fixtures. No arbitrary code.")
     payload = {"model": name, "messages":[{"role":"system","content":system},
                {"role":"user","content":json.dumps({"goal":goal,"observations":evidence,"remaining_tools":remaining})}],
-               "temperature":0.1,"max_tokens":850}
+               "temperature":0.1,"max_tokens":4096}
     try:
         with httpx.Client(timeout=45) as client:
             response=client.post(base+"/chat/completions",json=payload,
@@ -99,7 +99,7 @@ def make_followup_plan(goal, tasks):
         raise ModelUnavailable("Adaptive model follow-up failed: "+str(exc)[:300]) from exc
 
 def probe_provider():
-    """Explicit one-shot REAL inference probe. Never sends mission data or secrets in output."""
+    """Explicit REAL inference probe. Reserve tokens for Muse Spark Open reasoning as well as final text; no mission data sent."""
     if not configured():
         raise ModelUnavailable("Provider URL and API key are not configured")
     base=os.getenv("WORLDTRACE_MODEL_BASE_URL","").rstrip("/")
@@ -109,7 +109,7 @@ def probe_provider():
     payload={"model":name,
              "messages":[{"role":"system","content":"Return the word READY only."},
                          {"role":"user","content":"Connectivity check. Reply READY."}],
-             "max_tokens":24,"temperature":0}
+             "max_tokens":2048,"temperature":0}
     try:
         with httpx.Client(timeout=20) as client:
             response=client.post(base+"/chat/completions",json=payload,
@@ -148,7 +148,7 @@ def make_uploaded_file_plan(goal, roles):
             "Do not claim actual resolution, successful execution or independent verification.")
     payload={"model":name,"messages":[{"role":"system","content":system},
        {"role":"user","content":json.dumps({"goal":goal,"available_file_roles":roles})}],
-       "max_tokens":400,"temperature":0}
+       "max_tokens":4096,"temperature":0}
     try:
         with httpx.Client(timeout=35) as client:
             response=client.post(base+"/chat/completions",json=payload,
@@ -209,7 +209,7 @@ def assess_uploaded_evidence(goal, observations, cross_checks):
     payload={"model":name,"messages":[{"role":"system","content":prompt},
           {"role":"user","content":json.dumps({"instruction":goal,"evidence":evidence,
                                                "cross_checks":checks})}],
-          "max_tokens":900,"temperature":0.1}
+          "max_tokens":4096,"temperature":0.1}
     try:
         with httpx.Client(timeout=45) as client:
             response=client.post(base+"/chat/completions",json=payload,
