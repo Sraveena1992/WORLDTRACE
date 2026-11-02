@@ -43,6 +43,14 @@ Open the [public WORLDTRACE prototype](https://worldtrace.onrender.com/). Click 
 
 **No API key, customer uploads, external service, Meta model call or production database connection is used.** Sessions expire after 20 minutes; the server bounds active sessions to prevent unbounded demo storage. This public route is **not** full user authentication or permission to execute on an external system. The separate private Mission Control upload/approval workflow still requires an operator token.
 
+## 🧠 Optional *real* Meta reasoning on the SAME judge demo
+
+A protected **Run REAL Meta evidence assessment** button now appears inside each synthetic public demo result. This is a separate operator-only, potentially billable action using the private `WORLDTRACE_MISSION_TOKEN`; it is **not** available to anonymous visitors. When the configured Meta-hosted provider actually responds, the application displays advisory hypotheses, model identifier, provider response ID and a hash-chained **Meta Mission Commander** stage in the same demo trace. Agent Workforce shows that model role only after a genuine successful response. No API key is sent to the browser.
+
+The Meta prompt contains the fixed synthetic mission goal and aggregated parser metrics; it does **not** transmit private user uploads or raw customer documents. Model advice does not itself approve or execute a correction. Human approval and deterministic safety checks remain independent.
+
+**Current live verification boundary:** Baseten previously returned **HTTP 403**, so this endpoint's successful real inference remains **unverified**. On provider denial it returns an explicit error and records no fictitious model action. The no-key guided demo remains a deterministic safety demo that judges can run even without a provider key.
+
 ## 🛡️ Adversarial safety proof (judge challenge)
 
 Next to the successful no-key supplier resolution, click **Adversarial challenge — prove unsafe changes are blocked**. The application builds a separate, synthetic session with a missing row **and a conflicting value on an existing supplier**. The operator can review and approve the proposed change, but the execution-time safety gate refuses the correction because blindly inserting a missing row would not resolve the inconsistent dataset.
