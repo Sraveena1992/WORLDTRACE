@@ -79,6 +79,18 @@ The most valuable addition to the three-minute cut is the second no-key challeng
 
 **Release gate:** The new adversarial flow and model-contract tests must pass in the latest local and GitHub Actions runs before claiming the enhanced demonstration verified. The public challenge must also be tested in a fresh browser session.
 
+## Live Meta reasoning on the exact same scenario — only if provider access succeeds
+
+The public supplier demo now includes an **optional**, operator-only action: **Run REAL Meta evidence assessment (operator token required, may use credits)**. This is a guarded endpoint, NOT an anonymous billable request.
+
+1. Start the synthetic supplier demo and review the real parser findings.
+2. Click the Meta assessment button, and enter the private WORLDTRACE mission token **only in the browser prompt**.
+3. With a real authorized provider, the model returns bounded source-referenced hypotheses, next-action advice, model ID and response ID. The same demo's audit trace gains a **Meta Mission Commander** event.
+4. Show that model advice does not approve or perform a database change: the original human-approval and sandbox-safety gates remain in force.
+5. If the provider returns HTTP 403, display the failure truthfully; NEVER substitute mocked output or claim an AI run.
+
+The optional Meta call sends only fixed synthetic mission details plus sanitized evidence counts—not raw customer files. Success must be verified against an actual live provider response. The deterministic no-key demo remains the fallback, but does **not** establish Meta use.
+
 ## Local independent evidence
 
 ```powershell
