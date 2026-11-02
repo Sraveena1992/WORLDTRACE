@@ -144,6 +144,12 @@ Python · FastAPI · Pydantic · SQLite · pypdf · ReportLab · vanilla JavaScr
 
 Project layout: `app.py` provides API endpoints; `worldtrace/multifile.py` coordinates real file processing and trace; `worldtrace/uploads.py` owns parsers; `worldtrace/unified_records.py` stores consented results; `worldtrace/sandbox_recovery.py` implements approval-gated sandbox repair; `worldtrace/agent.py` holds optional Meta-compatible inference; `static/` contains the interface; `tests/` holds regression tests.
 
+## 🏁 Judge reproducibility pack
+
+[Judge Evidence & Reproducibility Pack](docs/JUDGE_EVIDENCE.md) documents positive and adversarial live-demo scenarios, permission/replay checks, evidence integrity, Meta-model verification gates, and every claim that the prototype does **not** substantiate.
+
+Run `python scripts/judge_benchmark.py` for a zero-credit machine-readable **synthetic** safety evaluation. This does not measure production reliability or Meta-model accuracy; it supplements (not replaces) the full pytest suite and live model verification.
+
 ## 📋 Submission audit and backups
 
 [Final pre-submission audit, nine-tool matrix, exact release checks and truthful project pitch](docs/FINAL_SUBMISSION_AUDIT_2026-11-02.md) · [3-minute demo runbook](docs/HACKATHON_DEMO.md). Protected GitHub source snapshots: `backup/pre-submission-2026-11-02` and `backup/submission-audit-2026-11-02`. Their existence does not imply persistent customer-data backup.
