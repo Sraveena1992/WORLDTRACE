@@ -54,6 +54,20 @@ def main():
         second=client.post(f"/api/unified-missions/{mid}/execute-demo-correction",
              headers=token,json={"action_index":0})
         assert second.status_code==409,"Duplicate correction was incorrectly allowed"
+        challenge=client.post("/api/public-demo/start?scenario=conflicting_record")
+        challenge.raise_for_status()
+        challenge_id=challenge.json()["demo_id"]
+        approve_challenge=client.post(f"/api/public-demo/{challenge_id}/approve")
+        approve_challenge.raise_for_status()
+        refused=client.post(f"/api/public-demo/{challenge_id}/execute")
+        refused.raise_for_status()
+        refusal=refused.json()
+        assert refusal["status"]=="BLOCKED_UNSAFE_CONFLICT",refusal
+        assert refusal["approved"] is True
+        assert refusal["current_target_rows"]==refusal["initial_target_rows"]==2
+        assert refusal["rows_added"]==0 and refusal["external_writes"]==0
+        assert refusal["trace_verified"] is True
+        assert client.post(f"/api/public-demo/{challenge_id}/execute").status_code==409
         print(json.dumps({
             "result":"PASS: APPROVED SANDBOX CORRECTION VERIFIED",
             "mission":mid,"missing_supplier_ids":["A3"],
@@ -65,6 +79,9 @@ def main():
             "report_sha256_verified":after["report_verified"],
             "duplicate_replay_blocked":True,
             "production_records_modified":False,
+            "adversarial_approved_action_blocked":True,
+            "adversarial_target_records_unchanged":True,
+            "adversarial_refusal_trace_verified":True,
             "model_inference_used":False
         },indent=2))
 
