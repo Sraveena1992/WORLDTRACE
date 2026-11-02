@@ -501,13 +501,14 @@ function renderPublicGuidedDemo(data){
  if(existing)existing.data=item.data;else app.unifiedMissions.unshift(item);
  app.selectedUnified=id;renderAgentWorkforce();
  const verified=data.status==='VERIFIED_SANDBOX';
- const step=data.status==='REVIEW_NEEDED'?'<button id="approvePublicDemo" class="run-btn secondary-run" type="button">✓ Approve isolated demo correction →</button>':
+ const blocked=data.status==='BLOCKED_UNSAFE_CONFLICT';
+ const step=blocked?'<div class="sandbox-blocked"><strong>SAFE REFUSAL — NO CHANGE APPLIED</strong><p>'+safe(data.block_reason||'Conflicting input detected')+'</p><p>Target remains '+safe(data.current_target_rows)+' records; 0 records inserted. The audit records why the action was refused.</p></div><button id="downloadBlockedReceipt" type="button" class="tiny-btn">↓ Download refusal evidence</button>':data.status==='REVIEW_NEEDED'?'<button id="approvePublicDemo" class="run-btn secondary-run" type="button">✓ Approve isolated demo correction →</button>':
   data.status==='APPROVED_SANDBOX_ONLY'?'<button id="executePublicDemo" class="run-btn secondary-run" type="button">▶ Execute approved SQLite correction & re-verify →</button>':
   '<div class="sandbox-verified"><strong>VERIFIED — ISOLATED DEMO ONLY</strong><p>Actual SQLite target changed from '+data.initial_target_rows+' to '+data.current_target_rows+' hashed records. '+data.rows_added+' inserted; source and target hashes now match.</p><small>Before '+safe(data.before_sha256)+' · After '+safe(data.after_sha256)+'</small></div><button id="downloadPublicReceipt" type="button" class="run-btn secondary-run">↓ Download real demo resolution receipt</button>';
  const trace=data.trace.map(e=>'<div class="public-trace-row"><strong>'+safe(e.role)+'</strong><span>'+safe(e.action.replaceAll('_',' '))+'</span><small>'+safe(e.hash.slice(0,16))+'…</small></div>').join('');
  $('publicDemoOutput').innerHTML='<div class="public-demo-facts"><div><small>SUPPLIED (SYNTHETIC) SOURCE</small><strong>'+data.source_rows+'</strong></div><div><small>INITIAL TARGET</small><strong>'+data.initial_target_rows+'</strong></div><div><small>MISSING RECORD</small><strong>'+safe(data.missing_ids.join(', '))+'</strong></div></div>'+
  '<div class="human-result"><div class="human-result-head"><strong>Mission result</strong><span class="run-status '+(verified?'passed':'finding')+'">'+safe(data.status.replaceAll('_',' '))+'</span></div>'+
- '<p>'+safe(data.instruction)+'</p><p>'+safe(verified?'After-state rechecked against the expected source hashes.':'The CSV parser found a missing supplier record. A correction is proposed but has not been applied until the separate approval and execution steps.')+'</p>'+
+ '<p>'+safe(data.instruction)+'</p><p>'+safe(blocked?'Safety gate rejected the approved correction because a pre-existing supplier value conflicts with the source. No database change was applied.':verified?'After-state rechecked against the expected source hashes.':'The CSV parser found a missing supplier record. A correction is proposed but has not been applied until the separate approval and execution steps.')+'</p>'+
  '<div class="human-result-note">No Meta inference · Synthetic inputs only · No raw customer files · No external writes</div></div>'+
  step+'<button type="button" class="tiny-btn" id="publicDemoAgents">◉ Inspect real stage evidence in Agent Workforce</button>'+
  '<details class="public-demo-trace"><summary>View '+data.trace.length+' recorded execution stages · SHA chain '+(data.trace_verified?'VALID':'INVALID')+'</summary>'+trace+'</details>';
@@ -522,6 +523,22 @@ function renderPublicGuidedDemo(data){
   const btn=$('executePublicDemo');btn.disabled=true;btn.textContent='Executing sandbox repair and re-querying state…';
   try{renderPublicGuidedDemo(await runPublicDemoOperation('/api/public-demo/'+encodeURIComponent(data.demo_id)+'/execute'))}
   catch(e){btn.disabled=false;btn.textContent='Retry sandbox execution';$('publicDemoOutput').insertAdjacentHTML('afterbegin','<p class="error">Demo execution failed: '+safe(e.message)+'</p>')}
+ };
+ if($('downloadBlockedReceipt'))$('downloadBlockedReceipt').onclick=()=>{
+   const lines=['# WORLDTRACE — Safety Refusal Evidence','',
+    'Scenario: synthetic supplier record conflict',
+    'Outcome: '+data.status,
+    'Safety reason: '+data.block_reason,
+    'Explicit approval: '+data.approved,
+    'Original target record count: '+data.initial_target_rows,
+    'Final target record count: '+data.current_target_rows,
+    'Records inserted: '+data.rows_added,
+    'External writes: '+data.external_writes,
+    'Trace hash chain valid: '+data.trace_verified,
+    'No Meta inference used. No external or production edits.',
+    '','## Trace'];
+   for(const e of data.trace)lines.push('- '+e.role+' / '+e.action+' / SHA '+e.hash);
+   downloadMarkdown(lines.join('\\n').replaceAll('\\n','\n')+'\n','WORLDTRACE-safety-refusal.md');
  };
  if($('downloadPublicReceipt'))$('downloadPublicReceipt').onclick=()=>{
   const lines=['# WORLDTRACE — Public Guided Demo Resolution Receipt','',
@@ -547,4 +564,13 @@ $('startPublicDemo').onclick=async()=>{
   renderPublicGuidedDemo(data);
  }catch(e){$('publicDemoOutput').innerHTML='<p class="error">Public demo unavailable: '+safe(e.message)+'</p>'}
  finally{button.disabled=false;button.textContent='▶ Start another fresh guided demo →'}
+};
+
+$('startPublicChallenge').onclick=async()=>{
+ const btn=$('startPublicChallenge');btn.disabled=true;btn.textContent='Preparing conflict challenge…';
+ try{
+  const data=await runPublicDemoOperation('/api/public-demo/start?scenario=conflicting_record');
+  renderPublicGuidedDemo(data);
+ }catch(e){$('publicDemoOutput').innerHTML='<p class="error">Safety challenge unavailable: '+safe(e.message)+'</p>'}
+ finally{btn.disabled=false;btn.textContent='⚠ Run another safety challenge →'}
 };
