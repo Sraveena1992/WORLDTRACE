@@ -538,7 +538,7 @@ function renderPublicGuidedDemo(data){
     'No Meta inference used. No external or production edits.',
     '','## Trace'];
    for(const e of data.trace)lines.push('- '+e.role+' / '+e.action+' / SHA '+e.hash);
-   downloadMarkdown(lines.join('\\n').replaceAll('\\n','\n')+'\n','WORLDTRACE-safety-refusal.md');
+   downloadMarkdown(lines.join('\n')+'\n','WORLDTRACE-safety-refusal.md');
  };
  if($('downloadPublicReceipt'))$('downloadPublicReceipt').onclick=()=>{
   const lines=['# WORLDTRACE — Public Guided Demo Resolution Receipt','',
