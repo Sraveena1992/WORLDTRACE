@@ -60,6 +60,25 @@
 
 **Finish:** "WORLDTRACE's design principle is simple: no claim of completion without an authorized action, observed after-state and traceable evidence."
 
+## Final judging edit: demonstrate both success AND safety refusal
+
+The most valuable addition to the three-minute cut is the second no-key challenge. Compress the initial explanation and use this **suggested timeline**, instead of treating a dashboard walkthrough as the demo:
+
+| Video timestamp | Screen and proof |
+|---|---|
+| 0:00–0:20 | WORLDTRACE thesis: detect, authorize, act, prove |
+| 0:20–0:45 | Public synthetic supplier demo: actual CSV comparison finds A3 missing |
+| 0:45–1:05 | Explicit human approval, separate from execution |
+| 1:05–1:30 | Execute in isolated SQLite; before 2 → after 3; verification passes |
+| 1:30–1:50 | Expand SHA-chained execution stages and download the resolution receipt |
+| 1:50–2:25 | **Adversarial challenge:** existing supplier value conflicts with source; approve, attempt execution, and observe **BLOCKED_UNSAFE_CONFLICT**, unchanged records and refusal event |
+| 2:25–2:45 | Agent Workforce: inspect Verification and Security role logs for both sessions |
+| 2:45–3:00 | Explain live Meta inference only if actual provider request succeeded; otherwise state status honestly and highlight approval/verification architecture |
+
+**Judge-critical framing:** The successful demo shows WORLDTRACE *can* perform an authorized correction. The adversarial challenge shows it also knows *when not to execute*. This latter branch is deterministic policy, not autonomous model reasoning. Never represent a synthetic case as a live customer integration.
+
+**Release gate:** The new adversarial flow and model-contract tests must pass in the latest local and GitHub Actions runs before claiming the enhanced demonstration verified. The public challenge must also be tested in a fresh browser session.
+
 ## Local independent evidence
 
 ```powershell
