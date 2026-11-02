@@ -23,4 +23,4 @@ def test_agent_cards_offer_real_evidence_inspection():
     assert "function renderAgentWorkforce()" in JS
     assert "app.unifiedMissions.unshift(item)" in JS
     assert 'id="agentRoleDetail"' in HTML
-    assert 'app.js?v=24' in HTML
+    assert 'app.js?v=25' in HTML
