@@ -48,4 +48,4 @@ def test_adversarial_demo_has_live_ui_and_safe_report():
     assert "scenario=conflicting_record" in js
     assert "BLOCKED_UNSAFE_CONFLICT" in js
     assert "downloadBlockedReceipt" in js
-    assert '/assets/app.js?v=26' in html
+    assert '/assets/app.js?v=27' in html
