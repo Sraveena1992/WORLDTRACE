@@ -54,6 +54,7 @@ def _view(token,s):
         "initial_target_rows":len(s["initial"]),"current_target_rows":len(current),
         "approved":s["approved"],"approval_time":s["approved_at"],
         "scenario":s["scenario"],"block_reason":s.get("block_reason"),
+        "model_assessment":s.get("model_assessment"),
         "verified":verified,"before_sha256":s["before_digest"],
         "after_sha256":_digest(json.dumps(current,sort_keys=True)) if verified else None,
         "rows_added":len(s["source"])-len(s["initial"]) if verified else 0,
@@ -88,6 +89,7 @@ def start(scenario="missing_only"):
         db.commit()
         SESSS={"db":db,"expires":time.time()+TTL_SECONDS,"source":source,"initial":target,
                "scenario":scenario,"block_reason":None,
+               "model_assessment":None,"model_pending":False,
                "analysis":analysis,"status":"REVIEW_NEEDED","approved":False,
                "approved_at":None,"trace":list(analysis["trace"]),
                "before_digest":_digest(json.dumps(target,sort_keys=True))}
@@ -144,3 +146,37 @@ def execute(token):
         multifile._event(s["trace"],"Verification Agent","independently_requery_sqlite",
               {"actual_equal_expected":True,"state_sha256":_digest(json.dumps(after,sort_keys=True))})
         return _view(token,s)
+
+
+def assess_with_meta(token,reasoner):
+    """Explicit, operator-authorized real inference on a synthetic demo's *aggregates*.
+
+    The provider is called outside the session lock. Calls are reserved first to
+    prevent accidentally spending credits on concurrent duplicate submissions.
+    """
+    with LOCK:
+        session=_get(token)
+        if session.get("model_assessment") is not None:
+            raise ValueError("Meta assessment already recorded for this demo")
+        if session.get("model_pending"):
+            raise ValueError("Meta assessment already in progress")
+        session["model_pending"]=True
+        goal=session["analysis"]["goal"]
+        observations=session["analysis"]["observations"]
+        checks=session["analysis"]["cross_checks"]
+    try:
+        assessment=reasoner(goal,observations,checks)
+        if not isinstance(assessment,dict) or not assessment.get("provider_response_id"):
+            raise ValueError("Missing real model provider response ID")
+    except BaseException:
+        with LOCK:
+            session["model_pending"]=False
+        raise
+    with LOCK:
+        session["model_pending"]=False
+        session["model_assessment"]=assessment
+        multifile._event(session["trace"],"Meta Mission Commander","meta_model_evidence_assessment",
+            {"model":assessment.get("model"),"provider_response_id":assessment["provider_response_id"],
+             "hypotheses":len(assessment.get("hypotheses",[])),
+             "scope":"synthetic evidence aggregates, advisory only"})
+        return _view(token,session)
