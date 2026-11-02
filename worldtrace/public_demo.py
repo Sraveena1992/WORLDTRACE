@@ -53,13 +53,16 @@ def _view(token,s):
         "missing_ids":["A3"],"source_rows":len(s["source"]),
         "initial_target_rows":len(s["initial"]),"current_target_rows":len(current),
         "approved":s["approved"],"approval_time":s["approved_at"],
+        "scenario":s["scenario"],"block_reason":s.get("block_reason"),
         "verified":verified,"before_sha256":s["before_digest"],
         "after_sha256":_digest(json.dumps(current,sort_keys=True)) if verified else None,
         "rows_added":len(s["source"])-len(s["initial"]) if verified else 0,
         "external_writes":0,"original_csv_modified":False,
         "scope":"Synthetic session / in-memory SQLite only. No Meta inference or production changes."}
 
-def start():
+def start(scenario="missing_only"):
+    if scenario not in ("missing_only","conflicting_record"):
+        raise ValueError("Unsupported public demo scenario")
     with LOCK:
         _clean()
         if len(SESSIONS)>=MAX_SESSIONS:
@@ -68,7 +71,8 @@ def start():
         salt=secrets.token_hex(16)
         goal="Investigate missing supplier onboarding records, require human approval, repair an isolated demo copy and independently verify."
         raw_source=b"id,name\nA1,Alpha\nA2,Beta\nA3,Gamma\n"
-        raw_target=b"id,name\nA1,Alpha\nA2,Beta\n"
+        raw_target=(b"id,name\nA1,Altered\nA2,Beta\n" if scenario=="conflicting_record"
+                    else b"id,name\nA1,Alpha\nA2,Beta\n")
         analysis=multifile.run(goal,{"source_csv":("synthetic-source.csv",raw_source),
                                      "target_csv":("synthetic-target.csv",raw_target)})
         def hash_records(raw):
@@ -83,6 +87,7 @@ def start():
         db.executemany("INSERT INTO target_rows VALUES(?,?)",target.items())
         db.commit()
         SESSS={"db":db,"expires":time.time()+TTL_SECONDS,"source":source,"initial":target,
+               "scenario":scenario,"block_reason":None,
                "analysis":analysis,"status":"REVIEW_NEEDED","approved":False,
                "approved_at":None,"trace":list(analysis["trace"]),
                "before_digest":_digest(json.dumps(target,sort_keys=True))}
@@ -117,8 +122,16 @@ def execute(token):
         if before!=s["initial"]:
             raise ValueError("Demo baseline changed, correction rejected")
         missing=set(desired)-set(before)
-        if not missing or set(before)-set(desired) or any(before[k]!=desired[k] for k in before):
-            raise ValueError("Only missing rows may be inserted into isolated demo")
+        if set(before)-set(desired) or any(before[k]!=desired[k] for k in before):
+            s["status"]="BLOCKED_UNSAFE_CONFLICT"
+            s["block_reason"]="Existing supplier record differs from source. Correction refused; conflicting rows require investigation."
+            multifile._event(s["trace"],"Security Agent","reject_unsafe_correction",
+                {"reason":"source_target_record_conflict","external_writes":0,
+                 "before_count":len(before),"after_count":len(_snapshot(conn)),
+                 "safety_check":"no mutated records"})
+            return _view(token,s)
+        if not missing:
+            raise ValueError("No missing rows to correct")
         with conn:
             for key in sorted(missing):
                 conn.execute("INSERT INTO target_rows VALUES(?,?)",(key,desired[key]))
