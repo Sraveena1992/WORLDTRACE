@@ -126,7 +126,18 @@ def probe_provider():
                 "message":"Actual inference response received; this does not validate mission planning"}
     except httpx.HTTPStatusError as exc:
         status=exc.response.status_code
-        raise ModelUnavailable("Provider rejected inference request (HTTP "+str(status)+"). Check credits, key and model access.") from exc
+        guidance={
+            400:"Request or model parameters rejected; compare with provider API documentation.",
+            401:"API key invalid, revoked, or not accepted for this endpoint.",
+            402:"Billing activation or available credits may be required.",
+            403:"Access denied: verify the API key's organization, Muse Spark Open entitlement and activated credits with Baseten.",
+            404:"Endpoint or model ID not found; confirm both with the provider.",
+            429:"Rate limit or usage quota reached; inspect provider limits.",
+            500:"Provider server error; retry after confirming service health.",
+            503:"Provider temporarily unavailable."
+        }.get(status,"Check provider status and endpoint permissions.")
+        # Do not echo response text: providers sometimes include sensitive request data.
+        raise ModelUnavailable("Provider HTTP "+str(status)+". "+guidance) from exc
     except (httpx.HTTPError,KeyError,ValueError,TypeError) as exc:
         raise ModelUnavailable("Model inference probe failed; connection not verified: "+type(exc).__name__) from exc
 
