@@ -26,3 +26,5 @@ jobs:
         run: python -m pytest -q
       - name: Prove approval-gated correction and re-verification
         run: python scripts/demo_resolution.py
+      - name: Run independent judge safety benchmark
+        run: python scripts/judge_benchmark.py
