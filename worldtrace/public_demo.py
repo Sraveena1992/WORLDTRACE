@@ -54,6 +54,8 @@ def _view(token,s):
         "initial_target_rows":len(s["initial"]),"current_target_rows":len(current),
         "approved":s["approved"],"approval_time":s["approved_at"],
         "scenario":s["scenario"],"block_reason":s.get("block_reason"),
+        "cross_checks":s["analysis"]["cross_checks"],
+        "evidence_roles":[item["role"] for item in s["analysis"]["observations"]],
         "model_assessment":s.get("model_assessment"),
         "verified":verified,"before_sha256":s["before_digest"],
         "after_sha256":_digest(json.dumps(current,sort_keys=True)) if verified else None,
@@ -64,7 +66,7 @@ def _view(token,s):
                  "no production changes.")}
 
 def start(scenario="missing_only"):
-    if scenario not in ("missing_only","conflicting_record"):
+    if scenario not in ("missing_only","conflicting_record","multi_source_incident"):
         raise ValueError("Unsupported public demo scenario")
     with LOCK:
         _clean()
@@ -76,8 +78,25 @@ def start(scenario="missing_only"):
         raw_source=b"id,name\nA1,Alpha\nA2,Beta\nA3,Gamma\n"
         raw_target=(b"id,name\nA1,Altered\nA2,Beta\n" if scenario=="conflicting_record"
                     else b"id,name\nA1,Alpha\nA2,Beta\n")
-        analysis=multifile.run(goal,{"source_csv":("synthetic-source.csv",raw_source),
-                                     "target_csv":("synthetic-target.csv",raw_target)})
+        files={"source_csv":("synthetic-source.csv",raw_source),
+               "target_csv":("synthetic-target.csv",raw_target)}
+        if scenario=="multi_source_incident":
+            # A second independent data source ties observed HTTP failure to
+            # the supplier-sync contract. Both are synthetic local artifacts.
+            har=json.dumps({"log":{"entries":[
+                {"request":{"url":"https://synthetic.invalid/api/suppliers/sync"},
+                 "response":{"status":503},"time":412},
+                {"request":{"url":"https://synthetic.invalid/api/suppliers/status"},
+                 "response":{"status":200},"time":38}
+            ]}}).encode()
+            contract=json.dumps({"endpoint":"/api/suppliers/sync",
+                                 "expected_status":200,"simulated_status":503}).encode()
+            files["har"]=("synthetic-sync.har",har)
+            files["api_json"]=("synthetic-contract.json",contract)
+            goal=("Investigate supplier onboarding mismatch using source and target CSV, "
+                  "HTTP failure evidence and API mock contract; request approval for "
+                  "a strictly scoped database-only repair and independently verify.")
+        analysis=multifile.run(goal,files)
         def hash_records(raw):
             import csv
             import io
