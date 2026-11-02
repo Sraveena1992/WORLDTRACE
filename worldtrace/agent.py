@@ -35,7 +35,7 @@ def make_plan(goal, use_model):
     if not base.startswith("https://"):
         raise ModelUnavailable("HTTPS inference endpoint required")
     key = os.environ["WORLDTRACE_MODEL_API_KEY"]
-    name = os.getenv("WORLDTRACE_MODEL_NAME", "meta-models/muse-spark-open")
+    name = os.getenv("WORLDTRACE_MODEL_NAME", "meta-models/muse-spark-open-1026")
     from .tools import AVAILABLE
     system = ("You are WORLDTRACE Mission Commander. Output ONLY a JSON object with reason and steps. "
               "Every step must include id, tool, depends_on (array of step IDs) and objective. "
@@ -76,7 +76,7 @@ def make_followup_plan(goal, tasks):
     base = os.environ["WORLDTRACE_MODEL_BASE_URL"].rstrip("/")
     if not base.startswith("https://"):
         raise ModelUnavailable("HTTPS inference endpoint required")
-    name = os.getenv("WORLDTRACE_MODEL_NAME", "meta-models/muse-spark-open")
+    name = os.getenv("WORLDTRACE_MODEL_NAME", "meta-models/muse-spark-open-1026")
     evidence = [{"tool":t["tool"], "status":t["status"], "result":t.get("result",{})} for t in tasks]
     system = ("You are WORLDTRACE follow-up planner. Review real SYNTHETIC fixture observations. "
               "Return ONLY JSON: either {\\\"finish\\\":true,\\\"reason\\\":\\\"...\\\"} or "
@@ -105,7 +105,7 @@ def probe_provider():
     base=os.getenv("WORLDTRACE_MODEL_BASE_URL","").rstrip("/")
     if not base.startswith("https://"):
         raise ModelUnavailable("HTTPS inference endpoint required")
-    name=os.getenv("WORLDTRACE_MODEL_NAME","meta-models/muse-spark-open")
+    name=os.getenv("WORLDTRACE_MODEL_NAME","meta-models/muse-spark-open-1026")
     payload={"model":name,
              "messages":[{"role":"system","content":"Return the word READY only."},
                          {"role":"user","content":"Connectivity check. Reply READY."}],
@@ -150,7 +150,7 @@ def make_uploaded_file_plan(goal, roles):
         raise ModelUnavailable("Invalid file-role inventory")
     base=os.environ["WORLDTRACE_MODEL_BASE_URL"].rstrip("/")
     if not base.startswith("https://"):raise ModelUnavailable("HTTPS inference endpoint required")
-    name=os.getenv("WORLDTRACE_MODEL_NAME","meta-models/muse-spark-open")
+    name=os.getenv("WORLDTRACE_MODEL_NAME","meta-models/muse-spark-open-1026")
     system=("You are WORLDTRACE Mission Commander. Output ONLY valid JSON: "
             '{"ordered_roles":["role1","role2"],"reason":"short rationale"}. '
             "The list MUST include EACH supplied role EXACTLY ONCE. "
@@ -194,7 +194,7 @@ def assess_uploaded_evidence(goal, observations, cross_checks):
     base=os.environ["WORLDTRACE_MODEL_BASE_URL"].rstrip("/")
     if not base.startswith("https://"):
         raise ModelUnavailable("HTTPS inference endpoint required")
-    name=os.getenv("WORLDTRACE_MODEL_NAME","meta-models/muse-spark-open")
+    name=os.getenv("WORLDTRACE_MODEL_NAME","meta-models/muse-spark-open-1026")
     evidence=[]
     for item in observations:
         result=item["result"]
