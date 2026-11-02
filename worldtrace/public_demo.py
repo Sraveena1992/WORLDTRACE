@@ -168,7 +168,7 @@ def assess_with_meta(token,reasoner):
         assessment=reasoner(goal,observations,checks)
         if not isinstance(assessment,dict) or not assessment.get("provider_response_id"):
             raise ValueError("Missing real model provider response ID")
-    except BaseException:
+    except Exception:
         with LOCK:
             session["model_pending"]=False
         raise
