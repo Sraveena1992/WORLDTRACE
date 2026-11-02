@@ -114,13 +114,13 @@ The Meta Muse Spark Open model is available from hosted providers including Base
 
 ```text
 WORLDTRACE_MODEL_BASE_URL=https://inference.baseten.co/v1
-WORLDTRACE_MODEL_NAME=meta-models/muse-spark-open
+WORLDTRACE_MODEL_NAME=meta-models/muse-spark-open-1026
 WORLDTRACE_MODEL_PROVIDER=Baseten
 WORLDTRACE_MODEL_API_KEY=<private Baseten API key>
 WORLDTRACE_MISSION_TOKEN=<separate private operator token>
 ```
 
-**Never commit keys.** The Mission Control **Test real inference connection** control sends one explicit short request that might consume credits. When the **actual model** checkbox is selected for a unified mission, WORLDTRACE asks the hosted model to propose an exact, validated file execution order; after local file processing it requests a **second real inference response** for bounded, evidence-referenced root-cause hypotheses. This sends the user instruction and selected role names, followed by *sanitized tool statuses and counts*. Raw PDFs, raw CSV rows, and extracted document excerpts are not sent through these calls.
+**Hackathon credential scope:** The participant's Baseten acceptance email explicitly states that its issued key works only with `meta-models/muse-spark-open-1026`. This hackathon-specific model ID overrides the generic public documentation example. Render's `WORLDTRACE_MODEL_NAME` environment variable must be updated explicitly; repository defaults do not override existing Render settings. $100 offered in email does not prove the credits are visible in the selected billing organization.\n\n**Never commit keys.** The Mission Control **Test real inference connection** control sends one explicit short request that might consume credits. When the **actual model** checkbox is selected for a unified mission, WORLDTRACE asks the hosted model to propose an exact, validated file execution order; after local file processing it requests a **second real inference response** for bounded, evidence-referenced root-cause hypotheses. This sends the user instruction and selected role names, followed by *sanitized tool statuses and counts*. Raw PDFs, raw CSV rows, and extracted document excerpts are not sent through these calls.
 
 The backend rejects incomplete or unauthorized model plans and invented evidence references. On provider failure, the API returns an explicit error rather than silently pretending local rules were model reasoning. **A successful real Baseten call has not yet been verified in this deployment (HTTP 403 previously observed).** Mocked tests do not establish real provider access.
 
