@@ -287,6 +287,15 @@ def get_public_guided_demo(demo_id:str):
     try:return public_demo.get(demo_id)
     except ValueError as exc:raise HTTPException(404,str(exc)) from exc
 
+@app.post('/api/public-demo/{demo_id}/meta-assess')
+def meta_assess_public_demo(demo_id:str, x_worldtrace_token: str | None = Header(default=None)):
+    """Optional genuine Meta assessment, operator-only, on synthetic evidence aggregates."""
+    require_mission_token(x_worldtrace_token)
+    try:return public_demo.assess_with_meta(demo_id,agent.assess_uploaded_evidence)
+    except agent.ModelUnavailable as exc:raise HTTPException(424,str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(404 if "expired" in str(exc) or "not found" in str(exc) else 409,str(exc)) from exc
+
 @app.post('/api/public-demo/{demo_id}/approve')
 def approve_public_guided_demo(demo_id:str):
     try:return public_demo.approve(demo_id)
