@@ -17,7 +17,10 @@ def test_primary_mission_entry_and_distinct_agents():
     assert "function renderAgentWorkforce()" in JS
     assert "app.unifiedMissions.unshift(mission)" in JS
     assert "data-launch-tool=" in JS # tools remain available, not copied into agents
-    assert "$('agentGrid').innerHTML=RESPONSIBILITIES.map" in JS
+    assert "const roleList=mission?.data?.model_assessment?RESPONSIBILITIES.concat" in JS
+    assert "$('agentGrid').innerHTML=roleList.map" in JS
+    assert "'Meta Mission Commander'" in JS
+    assert "meta_model_evidence_assessment" in JS
     assert "agent.followup_decision" not in HTML  # no invented AI model trace
 
 def test_six_roles_use_actual_uploaded_file_trace(monkeypatch):
