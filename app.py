@@ -54,7 +54,7 @@ def health():return {'status':'ok','service':'worldtrace','version':'0.1.0'}
 
 @app.get('/api/capabilities')
 def capabilities():
-    return {'meta_model_configured':agent.configured(),'model_name':__import__('os').getenv('WORLDTRACE_MODEL_NAME','meta-models/muse-spark-open'),
+    return {'meta_model_configured':agent.configured(),'model_name':__import__('os').getenv('WORLDTRACE_MODEL_NAME','meta-models/muse-spark-open-1026'),
             'local_workflow_available':True,'model_mode_available':agent.configured(),'tools':tools.TOOL_INFO,'connected_external_services':0,
             'message':'LOCAL workflow mode is deterministic, NOT autonomous model inference; only MODEL mode uses actual configured inference.'}
 
