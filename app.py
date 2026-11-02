@@ -203,6 +203,19 @@ async def run_uploaded_multi_file_mission(
             if upload is not None:
                 selected[role] = (upload.filename or "", await upload.read(uploads.MAX_BYTES + 1))
         try:
+            # Validate the complete file inventory BEFORE spending paid model tokens.
+            # The model must never receive an invalid or incomplete mission.
+            if not isinstance(goal, str) or not 12 <= len(goal.strip()) <= 1500:
+                raise ValueError("Instruction must be 12-1500 characters")
+            if not 1 <= len(selected) <= len(multifile.FIELDS):
+                raise ValueError("Select one to eight supported input roles")
+            if ("source_csv" in selected) != ("target_csv" in selected):
+                raise ValueError("CSV reconciliation requires both source and target files")
+            if sum(len(data) for _, data in selected.values()) > multifile.MAX_TOTAL:
+                raise ValueError("Combined file size exceeds 8 MiB")
+            for role, (filename, data) in selected.items():
+                if not filename.lower().endswith(multifile.FIELDS[role][1]) or not 1 <= len(data) <= uploads.MAX_BYTES:
+                    raise ValueError("Invalid or oversized file for role " + role)
             model_plan=None
             if model_planning:
                 try:model_plan=agent.make_uploaded_file_plan(goal,list(selected))
