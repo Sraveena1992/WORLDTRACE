@@ -79,6 +79,31 @@ WORLDTRACE is an evidence-first operations execution prototype that turns a supp
 
 **Roadmap:** Activate eligible real Meta inference, introduce durable storage and restart-safe execution, connector-scoped approvals, deeper independent verification and production-grade identity/access controls.
 
+
+## Nine Enterprise Tools — actual capability and truth audit
+
+| Tool | Fixture mode | Real user file mode | External system integration |
+|---|---|---|---|
+| PDF intelligence | supplier PDF identity and signature text assertions | PDF text/page extraction and informational mentions | NO OCR, no signature authenticity |
+| Email automation | synthetic EML sender/subject/content checks | EML message inspection only | NO sending or mailbox connector |
+| Network observability | HAR status failures | Uploaded HAR failure extraction | NO live packet capture |
+| ETL verification | source vs target sample CSV comparison | User-provided CSV source/target reconciliation by `id` | NO production database change |
+| Database testing | Read-only sample SQLite supplier status | No general user database connector | NO production database |
+| API virtualization | Compare local JSON expected vs simulated response | Local user JSON simulated contract evaluation | NO external HTTP execution |
+| Performance probe | 20 bounded in-process hash timings | No real performance/load-test integration | NO deployment load test |
+| Middleware testing | Duplicate JSON message IDs in fixture | Uploaded message JSON duplicate checks | NO message broker connector |
+| Mainframe contract | Sample 20-character record validation | User TXT fixed-width checks | NO mainframe connector |
+
+**Audit finding:** All nine tools have meaningful local operations, but they do **not** represent nine connected enterprise services. Seven have uploaded-file analogues; database and performance remain synthetic fixture-only. Name collisions are not evidence of independently reasoning agents.
+
+## Backup and CI safeguards
+
+- Baseline backup created: `backup/pre-submission-2026-11-02`.
+- Post-audit backup created: `backup/submission-audit-2026-11-02`.
+- CI definition `.github/workflows/tests.yml` updated to run Python compilation, frontend JS syntax, pytest and the deterministic one-command sandbox correction.
+- The backups preserve source code in GitHub; they are NOT production SQLite database backups, video backups, or submission-portal copies.
+- Any newly committed changes after backup creation require checking the final release SHA and rerunning tests.
+
 ## Blocking actions before submitting
 
 1. **ASAP:** Resolve Baseten provider HTTP 403 or activate an eligible official alternative provider. Never claim Meta reasoning until an actual successful response is captured.
