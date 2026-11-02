@@ -104,6 +104,15 @@ WORLDTRACE is an evidence-first operations execution prototype that turns a supp
 - The backups preserve source code in GitHub; they are NOT production SQLite database backups, video backups, or submission-portal copies.
 - Any newly committed changes after backup creation require checking the final release SHA and rerunning tests.
 
+
+## November 2 — Adversarial judging hardening (candidate; acceptance pending)
+
+New judge-facing feature: **public safety challenge** with a second synthetic case where supplier A1 conflicts with the source while A3 is missing. Approval is explicitly captured, but the execution policy refuses the unsafe missing-row insert; the target database must remain unchanged. This is the negative counterpart to the existing 2→3 verified correction. The refusal trace and a downloadable safety report are exposed in the UI.
+
+Meta Muse Spark Open integration had output caps of only 24 tokens for the connectivity probe and 400/900 for uploaded-plan/assessment. Meta's documented reasoning behavior can consume output allowance before final answer. Budgets have been increased; this change **does not solve** Baseten HTTP 403 or prove a live Meta response. It may increase inference cost when live provider access succeeds.
+
+The one-command local demo now checks both approved success and adversarial approved-but-blocked scenarios. Added tests for public refusal and the simulated Meta provider protocol. **No newly added tests or live challenge are considered passed until the user or a CI run executes them.**
+
 ## Blocking actions before submitting
 
 1. **ASAP:** Resolve Baseten provider HTTP 403 or activate an eligible official alternative provider. Never claim Meta reasoning until an actual successful response is captured.
