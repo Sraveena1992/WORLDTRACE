@@ -235,8 +235,9 @@ function renderAgentWorkforce(){
  $('agentMissionSummary').innerHTML=mission?
  '<strong>'+safe(mission.goal)+'</strong><p>'+mission.data.observations.length+' analyzed file roles · '+mission.data.proposed_actions.length+' manual follow-ups · '+safe(mission.data.status.replaceAll('_',' '))+'</p><button type="button" class="tiny-btn" id="agentToMission">Review mission outcome</button>':
  'No mission selected. To try all six responsibility views, click “Run public supplier demo — no key needed” above, then start the demo. You can also load private UM- missions with your operator token.';
- if(mission)$('agentToMission').onclick=()=>{route('multi');$('multiResults').scrollIntoView({behavior:'smooth'})};
- $('agentGrid').innerHTML=RESPONSIBILITIES.map(([title,description,event])=>{
+ if(mission)$('agentToMission').onclick=()=>{route('multi');$(mission.id.startsWith('PUBLIC-DEMO-')?'publicDemoOutput':'multiResults').scrollIntoView({behavior:'smooth',block:'center'})};
+ const roleList=mission?.data?.model_assessment?RESPONSIBILITIES.concat([['Meta Mission Commander','Genuine model-generated evidence hypotheses, operator approved and advisory only','meta_model_evidence_assessment']]):RESPONSIBILITIES;
+ $('agentGrid').innerHTML=roleList.map(([title,description,event])=>{
   const matched=mission?mission.data.trace.filter(e=>e.action===event):[];
   const count=matched.length;
   const outcome=mission?count+' recorded operation'+(count===1?'':'s'):'Awaiting mission';
@@ -246,7 +247,7 @@ function renderAgentWorkforce(){
  }).join('');
  $('agentGrid').querySelectorAll('[data-role-detail]').forEach(btn=>btn.onclick=()=>{
    const title=btn.dataset.roleDetail;
-   const responsibility=RESPONSIBILITIES.find(x=>x[0]===title);
+   const responsibility=roleList.find(x=>x[0]===title);
    const matching=mission?mission.data.trace.filter(e=>e.role===title):[];
    $('agentRoleDetail').innerHTML='<h2>'+safe(title)+'</h2><p>'+safe(responsibility?.[1]||'Scoped responsibility')+'</p>'+
     (mission?'<p><strong>Mission:</strong> '+safe(mission.id)+' · '+matching.length+' actual stage records</p>'+
