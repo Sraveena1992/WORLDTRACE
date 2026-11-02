@@ -234,3 +234,9 @@ button:focus-visible,a:focus-visible,select:focus-visible{outline:2px solid #74e
 .public-trace-row:first-of-type{margin-top:12px}
 .public-trace-row small{color:#8babb8}
 @media(max-width:650px){.public-demo-facts{grid-template-columns:1fr}.public-trace-row{grid-template-columns:1fr}}
+
+/* Judge challenge — explicit safety refusal, distinct from successful verification */
+.sandbox-blocked{margin:14px 0;padding:17px 18px;border:1px solid #b98143;border-radius:10px;background:#302518;color:#ffdfac}
+.sandbox-blocked strong{display:block;margin-bottom:9px;letter-spacing:.06em;font-size:12px}
+.sandbox-blocked p{font-size:12px;line-height:1.65;color:#f3d9b8;margin:7px 0}
+#startPublicChallenge{display:block;margin-top:10px;width:100%;text-align:center;padding:12px;white-space:normal}
