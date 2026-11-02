@@ -126,6 +126,15 @@ The one-command local demo now checks both approved success and adversarial appr
 
 **Release blockers still open:** Live Baseten inference 403, final three-minute video, official accepted submission receipt, and final judge demo browser pass on this exact commit. Production durability, multi-tenant RBAC and customer integrations are future work, not completed features.
 
+## November 2 — High-impact judge improvements (multi-source candidate)
+
+- A **third synthetic public scenario** now uses genuine local CSV, HAR and API JSON parsing, correlates the HTTP 503 against a mock contract, and retains all three evidence roles for a protected Muse Spark Open advisory assessment. No external HTTP calls are made to the synthetic endpoint.
+- The cross-source consistency check shows that both synthetic inputs report **503**, not that the HTTP failure is repaired.
+- Any approved SQLite correction is bounded to missing hashed supplier data. The user interface explicitly states the **HTTP 503 remains unresolved**; the third scenario is **partial containment**, not an end-to-end API recovery.
+- Added two dedicated regression tests for role coverage, parser results, preapproval refusal, after-state proof and honest UI limitations.
+- README now records previously confirmed live **Muse Spark Open-1026** advisory inference and identifies supplier-onboarding operations as the target user; removes outdated blanket claim that provider inference has never worked.
+- The current changes are **not yet accepted on local or live Render tests**; previous confirmed gate was **103/103 tests and 12/12 judge checks** on commit `972e570`. Current expected local count: 105.
+
 ## Blocking actions before submitting
 
 1. **ASAP:** Resolve Baseten provider HTTP 403 or activate an eligible official alternative provider. Never claim Meta reasoning until an actual successful response is captured.
