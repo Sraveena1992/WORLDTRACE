@@ -128,6 +128,10 @@ Python · FastAPI · Pydantic · SQLite · pypdf · ReportLab · vanilla JavaScr
 
 Project layout: `app.py` provides API endpoints; `worldtrace/multifile.py` coordinates real file processing and trace; `worldtrace/uploads.py` owns parsers; `worldtrace/unified_records.py` stores consented results; `worldtrace/sandbox_recovery.py` implements approval-gated sandbox repair; `worldtrace/agent.py` holds optional Meta-compatible inference; `static/` contains the interface; `tests/` holds regression tests.
 
+## 📋 Submission audit and backups
+
+[Final pre-submission audit, nine-tool matrix, exact release checks and truthful project pitch](docs/FINAL_SUBMISSION_AUDIT_2026-11-02.md) · [3-minute demo runbook](docs/HACKATHON_DEMO.md). Protected GitHub source snapshots: `backup/pre-submission-2026-11-02` and `backup/submission-audit-2026-11-02`. Their existence does not imply persistent customer-data backup.
+
 ## 🚧 Outstanding work / submission honesty
 
 Full production-grade autonomy, durable hosted persistence, real customer-approved connectors, independently deployed AI workers, identity-based RBAC, and verified successful live Muse Spark Open inference are **not complete**. Hackathon results and prize placement cannot be guaranteed. We submit only behaviors demonstrated in the live application or reproducible command-line checks.
