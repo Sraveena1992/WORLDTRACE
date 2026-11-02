@@ -113,6 +113,19 @@ Meta Muse Spark Open integration had output caps of only 24 tokens for the conne
 
 The one-command local demo now checks both approved success and adversarial approved-but-blocked scenarios. Added tests for public refusal and the simulated Meta provider protocol. **No newly added tests or live challenge are considered passed until the user or a CI run executes them.**
 
+## November 2 — Final candidate hardening / Meta same-mission integration
+
+- Private upload requests now validate goal, supported file-role pairs, per-file and aggregate size limits **before** initiating any billable Meta planning request. Added regression tests for zero provider requests on invalid input.
+- Corrected the Meta model fallback ID to official Baseten `meta-models/muse-spark-open`.
+- Protected inference probe reports operator-useful 401/402/403/404/429 distinctions without echoing provider response bodies or credentials. This does NOT resolve provider entitlement.
+- The same synthetic guided demo now offers optional **operator-only live Meta evidence reasoning**, calling the real hosted model on sanitized aggregate findings and recording provider model, response ID and trace evidence. No login-free billable endpoint.
+- Agent Workforce surfaces the separate Meta Mission Commander role only after a real model response, distinguishing deterministic stage labels from actual inference.
+- The adversarial refusal remains deterministic and human approval does not override safety.
+- Added five regression tests for failed input preflight, real-provider-denial semantics and protected same-mission AI wiring. **Latest local/CI results still need verification after these code changes.**
+- GitHub source backup branch: `backup/2026-11-02-final-meta-integration-candidate`.
+
+**Release blockers still open:** Live Baseten inference 403, final three-minute video, official accepted submission receipt, and final judge demo browser pass on this exact commit. Production durability, multi-tenant RBAC and customer integrations are future work, not completed features.
+
 ## Blocking actions before submitting
 
 1. **ASAP:** Resolve Baseten provider HTTP 403 or activate an eligible official alternative provider. Never claim Meta reasoning until an actual successful response is captured.
