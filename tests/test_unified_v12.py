@@ -46,4 +46,4 @@ def test_navigation_and_reporting_wired():
     assert "route('agents')" in JS
     assert "data.report_markdown" in JS
     assert "id=\"downloadMulti\"" in JS
-    assert '/assets/app.js?v=26' in HTML
+    assert '/assets/app.js?v=27' in HTML
