@@ -4,6 +4,14 @@
 
 **Do not claim:** External production changes, six independently hosted AI agents, unrestricted self-repair, durable Render storage, or successful real Meta inference until the actual provider response is verified.
 
+## Stronger final-cut option: multi-source evidence + real Meta (new candidate; needs live test)
+
+The public **Multi-source incident — CSV + HAR + API contract** scenario combines *actual bounded file parsers* for a missing supplier row, an HTTP 503 in synthetic HAR, and an API mock contract expecting 200 but reporting simulated 503. The cross-file check correlates the statuses; the application **does not** claim to fix the external API.
+
+For a more differentiated three-minute judging cut, show: (1) multi-source incident source roles and cross-check, (2) optional genuine Muse Spark Open advisory hypotheses on the same session (operator token required), (3) approval-gated isolated database correction with clear *API issue still unresolved* boundary, (4) conflicting-record refusal, (5) hash-linked stages and receipt. Keep total video at **three minutes**. If Meta call fails in the new scenario, show the already verified real-model supplier session and don't invent a fresh inference.
+
+The original single-CSV case remains the low-risk backup demo; both are synthetic and not equivalent to a real customer incident.
+
 ## Preflight
 
 - Deploy newest main commit; confirm Render reports Live.
