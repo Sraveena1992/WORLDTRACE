@@ -181,3 +181,5 @@ Full production-grade autonomy, durable hosted persistence, real customer-approv
 ## License
 
 [MIT](LICENSE). WORLDTRACE source code and branding are original to this project.
+
+## Dhan Guru Nanak
