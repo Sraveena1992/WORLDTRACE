@@ -3,7 +3,7 @@
 
 ![WORLDTRACE geometric W brand mark](WORLDTRACE_Logo_HD_2048.png)
 
-[🌐 Live prototype](https://worldtrace.onrender.com/) · [💻 Source code](https://github.com/Sraveena1992/WORLDTRACE) · [📖 API docs](https://worldtrace.onrender.com/docs) · [🩺 Health check](https://worldtrace.onrender.com/healthz)
+[🎬 Watch the WORLDTRACE demo (YouTube, 1080p)](https://www.youtube.com/watch?v=xcd5-5PG8-c) · [🌐 Live prototype](https://worldtrace.onrender.com/) · [💻 Source code](https://github.com/Sraveena1992/WORLDTRACE) · [📖 API docs](https://worldtrace.onrender.com/docs) · [🩺 Health check](https://worldtrace.onrender.com/healthz)
 
 **Meta Global AI Developer Hackathon 2026 · Startups track · Evidence-first operations prototype**
 
